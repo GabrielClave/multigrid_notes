@@ -1,0 +1,134 @@
+\documentclass{article}
+\usepackage[utf8]{inputenc}
+\usepackage{amsmath, amsthm}
+\usepackage{parskip}
+
+\usepackage[french]{babel}
+
+\usepackage{XCharter}
+\usepackage[charter]{mathdesign}
+
+
+\begin{document}
+\title{MG tutorial notes}
+\maketitle
+
+\section{Relaxation methods}
+
+\subsection*{Notations}
+
+\begin{align*}
+    \text{Problem:}          \quad & Au = f \\
+    \text{Error:}            \quad & e = u - v \\
+    \text{Residual:}         \quad & r = f - Av \\
+    \text{Residual Problem:} \quad & Ae = r
+\end{align*}
+
+\subsection*{Relaxation Methods}
+
+Decompose $A$ into $M - N$, where $M$ is easy to invert.
+
+\[
+    Au = f \implies Mu = Nu + f
+\]
+
+$u$ is a stationary point:
+\[
+    u = M^{-1}Nu + M^{-1}f
+\]
+
+With $R = M^{-1}N$, we use the iteration:
+\[
+    v^{(k+1)} = Rv^{(k)} + M^{-1}f
+\]
+
+Using $M^{-1}f = u - Ru$, we get:
+\[
+    e^{(k+1)} = Re^{(k)} = R^{k}e^{(0)}
+\]
+
+If $\|R\| < 1$, the error is forced to zero.
+
+\subsubsection*{Examples (for matrices with nonzero diagonal)}
+\begin{itemize}
+    \item \textbf{Jacobi:} $A = D - L - U \quad M = D$
+    
+    \[
+        Dv^{(k+1)} = (L + U)v^{(k)} + f
+    \]
+    \[
+        a_{ii}v^{(k+1)}_{i} = \sum_{j \neq i}a_{ij}v^{(k)}_{j} + f_{i}
+    \]
+    solve for $v_{i}$ using the previous estimate
+
+    \item \textbf{Gauss-Seidel:} $M = D - L$
+    \[
+        (D-L)v^{(k+1)} = Uv^{(k)} + f
+    \]
+    
+    solve for $v_{j}$ using the previous estimate and already computed values
+\end{itemize}
+
+\subsubsection*{Issue \& strength}
+Very slow convergence rate: good at the beginning, then stagnates.
+Able to remove high-frequency/oscillatory error, but can't deal with low frequency/smooth one.
+% \[
+%     e \approx Re \implies (I - M^{-1}N)e \approx 0 \implies Ae \approx 0
+% \]
+% The error is in the kernel of $A$.
+\[
+    e^{(k+1)} = R^{k}e^{(0)}
+\]
+
+\begin{align*}
+    R & = D^{-1}(L+U) \\
+    & = D^{-1}(D - A) \\
+    R & = I - \frac{1}{2}A
+\end{align*}
+
+In a 1D poisson with $n-1$ points, the eigenvalues of $A$ are $\lambda_{k} = 4\sin^{2}(\frac{k\pi}{2n})$
+
+\subsubsection*{Coarse grid}
+
+Starting point: If you subsample a signal, you increase the frequency of its modes.
+
+idea for a recursive procedure:
+
+- Relaxation until the error is smooth
+
+- project the error on a smaller space where it becomes oscillatory again
+
+- Relaxation \dots
+
+Need a way to link the grids between eachother
+
+\begin{itemize}
+    \item \textbf{Interpolation/Prolongation:} coarse -> fine
+    \item \textbf{Projection/Restriction:} fine -> coarse
+\end{itemize}
+
+Linear interpolation works well when the signal is smooth
+
+what problem do we address on the coarse grid?
+\[
+A_{c}e_{c} = r_{c}
+\]
+
+In the geometric case, the physics dictate the operator: you can compute $A_{c}$ on the coarse grid
+
+In the algebraic case, assuming the interpolation
+\begin{align*}
+    e \approx Pe_{c} \implies Ae = r & \approx APe_{c} \\ 
+    P^{T}r & \approx P^{T}APe_{c}
+\end{align*}
+\begin{align*}
+    A_{c}e_{c} & = r_{c} \\ 
+    A_{c} & = P^{T}AP
+\end{align*}
+
+
+\section{Basic multigrid}
+
+
+
+\end{document}
