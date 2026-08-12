@@ -11,6 +11,7 @@
 
 \begin{document}
 \title{MG tutorial notes}
+\author{Gabriel Clave}
 \maketitle
 
 \section{Relaxation methods}
@@ -80,6 +81,8 @@ Able to remove high-frequency/oscillatory error, but can't deal with low frequen
     e^{(k+1)} = R^{k}e^{(0)}
 \]
 
+idea for Jacobi
+
 \begin{align*}
     R & = D^{-1}(L+U) \\
     & = D^{-1}(D - A) \\
@@ -87,6 +90,13 @@ Able to remove high-frequency/oscillatory error, but can't deal with low frequen
 \end{align*}
 
 In a 1D poisson with $n-1$ points, the eigenvalues of $A$ are $\lambda_{k} = 4\sin^{2}(\frac{k\pi}{2n})$
+and the eigenvectors are \dots
+
+picture
+
+weighted Jacobi
+
+composyx example
 
 \subsubsection*{Coarse grid}
 
@@ -100,14 +110,16 @@ idea for a recursive procedure:
 
 - Relaxation \dots
 
-Need a way to link the grids between eachother
+Need a way to link the grids between each others
 
 \begin{itemize}
     \item \textbf{Interpolation/Prolongation:} coarse -> fine
     \item \textbf{Projection/Restriction:} fine -> coarse
 \end{itemize}
 
-Linear interpolation works well when the signal is smooth
+Projection is easy, you start with more information than you need
+
+Interpolation is approximative, though Linear interpolation works well when the signal is smooth
 
 what problem do we address on the coarse grid?
 \[
@@ -129,6 +141,61 @@ In the algebraic case, assuming the interpolation
 
 \section{Basic multigrid}
 
+\subsection*{general idea}
 
+\begin{itemize}
+    \item Relax on $Au = f$ on the fine grid to obtain an approximation $v$.
+    \item Compute the residual $r = f - Av$
+    \begin{itemize}
+        \item Relax on the residual equation $A_{c}e_{c} = r_{c}$ on the coarse grid to obtain an approximation to the error $e_{c}$.
+    \end{itemize}
+    \item Correct the approximation with the error estimate $v \leftarrow v + e_{c}$.
+\end{itemize}
+
+\subsection*{V-cycle}
+
+\begin{itemize}
+    \item Relax on $Au = f$ on the fine grid to obtain an approximation $v$.
+    \item Compute the residual $r = f - Av$
+    \begin{itemize}
+        \item Recursively solve $A_{c}e_{c} = r_{c}$ on the coarse grid
+    \end{itemize}
+    \item Correct the approximation with the error estimate $v \leftarrow v + e_{c}$.
+\end{itemize}
+
+\subsection*{Full multigrid cycle}
+A good choice of initial guess can speed up V-cycle convergence.
+
+To get one we run a V-cycle on each level before starting the first one on the finest grid.
+
+\section{Elements of convergence}
+
+\subsection*{Notations}
+
+\begin{align*}
+    \text{Discretization error:}       \quad & E^{h}_{i} = u(x_{i}) - u^{h}_{i} \\
+    \text{algebraic error:}            \quad & e^{h} = u^{h} - v^{h} \\
+\end{align*}
+
+difference between exact continuous solution and exact discretized solution \\ 
+difference between exact discretized solution and estimate
+
+We can show that
+\[
+\|E^{h}_{i}\| \le Kh^{p}
+\]
+
+\subsection*{V-cycle}
+
+We want the multigrid cycle to reduce $e^{h}$ down to $ O(h^{p})$, for a sufficiently low $h$.
+
+For a problem with $n^{d}$ unknown and $h = \frac{1}{n}$.
+Each multigrid cycle reduce the error by a factor of $\gamma$, independent of $n$.
+
+We need k cycles, with $\gamma^{k} = O(n^{-p})$ ie $k = O(\log(n))$
+
+The cost per V-cycle is $O(n^{d})$ giving a total cost of $ O(n\log(n))$
+
+\subsection*{FMG}
 
 \end{document}
