@@ -131,11 +131,11 @@ In the geometric case, the physics dictate the operator: you can compute $A_{c}$
 In the algebraic case, assuming the interpolation
 \begin{align*}
     e \approx Pe_{c} \implies Ae = r & \approx APe_{c} \\ 
-    P^{T}r & \approx P^{T}APe_{c}
+    P^{\top}r & \approx P^{\top}APe_{c}
 \end{align*}
 \begin{align*}
     A_{c}e_{c} & = r_{c} \\ 
-    A_{c} & = P^{T}AP
+    A_{c} & = P^{\top}AP
 \end{align*}
 
 
@@ -194,8 +194,46 @@ Each multigrid cycle reduce the error by a factor of $\gamma$, independent of $n
 
 We need k cycles, with $\gamma^{k} = O(n^{-p})$ ie $k = O(\log(n))$
 
-The cost per V-cycle is $O(n^{d})$ giving a total cost of $ O(n\log(n))$
+The cost per V-cycle is $O(n^{d})$ giving a total cost of $ O(N\log(N))$
 
 \subsection*{FMG}
+
+The idea is to show that a constant number (independent of n and h) of FMG cycle is enough to reduce the error to the desired magnitude.
+
+\[
+    \|\mathbf{e}^{h}\|_{A^{h}} \le Kh^{p}.
+\]
+
+we work by induction: it's true for the bottom level (direct solve)
+
+assuming all but the finest grid have been solved, the initial error is:
+\[
+    \mathbf{e}_0^h = \mathbf{u}^h - P \mathbf{v}^{2h}.
+\]
+
+We also assume the interpolation error is bounded as:
+\[
+    \|\mathbf{u}^h - P \mathbf{u}^{2h}\|_{A^h} \le K\alpha h^p,
+\]
+
+\begin{align*}
+    \|\mathbf{e}_0^h\|_{A^h} &= \|\mathbf{u}^h - P \mathbf{v}^{2h}\|_{A^h} \\
+    &\le \|\mathbf{u}^h - P \mathbf{u}^{2h}\|_{A^h} + \|P \mathbf{u}^{2h} - P \mathbf{v}^{2h}\|_{A^h}  \\
+    &= \underbrace{\|\mathbf{u}^h - P \mathbf{u}^{2h}\|_{A^h}}_{\le K\alpha h^p} + \underbrace{\|\mathbf{u}^{2h} - \mathbf{v}^{2h}\|_{A^{2h}}}_{\le K{(2h)}^p}.
+\end{align*}
+
+noting that
+\[
+    \| Px \|_{A^h} = x^{\top} P^{\top} A^h P x = \| x \|_{A^{2h}}
+\]
+
+we are left with an $O(1)$ factor to eliminate, which requires $O(1)$ cycles
+
+The cost per FMG-cycle is $O(n^{d})$ giving a total cost of $ O(N)$
+\subsection*{Spectral insight}
+
+\subsection*{algebraic insight}
+
+% diagnosis: how does the restriction acts on high/low freq nodes ?
 
 \end{document}
