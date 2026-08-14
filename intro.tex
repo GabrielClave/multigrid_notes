@@ -8,6 +8,12 @@
 \usepackage{XCharter}
 \usepackage[charter]{mathdesign}
 
+\usepackage{amsmath}
+
+\DeclareMathOperator{\range}{range}
+\DeclareMathOperator{\nul}{null}
+\DeclareMathOperator{\im}{im}
+
 
 \begin{document}
 \title{MG tutorial notes}
@@ -232,8 +238,54 @@ we are left with an $O(1)$ factor to eliminate, which requires $O(1)$ cycles
 The cost per FMG-cycle is $O(n^{d})$ giving a total cost of $ O(N)$
 \subsection*{Spectral insight}
 
+the restriction from a grid of $2p + 1$ points to a grid of $p$ points is an operator with full rank $p$, and null $p+1$
+
+- smooth modes becomes smooth nodes \\ 
+- high frequencies cannot be represented on the coarse grid: oscillatory modes becomes smooth nodes
+
+% action of restriction on modes
+
+the interpolation from a grid of $p$ points to a grid of $2p + 1$ points is an operator with rank $p$, and null $p+1$
+
+- smooth modes becomes smooth nodes and oscillatory modes appear
+
+% action of interpolation on modes
+
+\textbf{two-grid correction scheme}
+\begin{align*}
+    \text{Relax q times:}      \quad & e \leftarrow R^{q}e \\
+    \text{Compute residuals:}  \quad & r = f - Av \\
+    \text{Restrict:}           \quad & r_{c} = P^{\top}r \\
+    \text{Coarse solve:}       \quad & e_{c} = A_{c}^{-1}r_{c} \\
+    \text{Interpolate:}        \quad & e_{c}^{fine} = Pe_{c} \\
+    \text{Correct:}            \quad & e \leftarrow e - e_{c}^{fine}
+\end{align*}
+
+\[
+    e \leftarrow e - PA_{c}^{-1}P^{\top}AR^{q}e \\
+\]
+
+\[
+    TG_{q} = (I - P{(P^{\top}AP)}^{-1}P^{\top}A)R^{q} \\
+\]
+
+% action of two-grid operator on modes
+% with and without relaxation
+
+$TG_{0}$ suppresses the smooth components of the error.
+
+$TG_{q}$ suppresses the error.
+
 \subsection*{algebraic insight}
 
-% diagnosis: how does the restriction acts on high/low freq nodes ?
+$\Pi = P{(P^{\top}AP)}^{-1}P^{\top}A$ is the $A$-orthogonal projection on $\range{(P)}$
+
+$TG_{0} = I - \Pi$ is the $A$-orthogonal projection on $\range{(P)}^{\perp_A} = \nul(P^{T}A)$
+
+% why are low freq close to Im P ?
+% final graph
 
 \end{document}
+
+
+% diagnosis: how does the restriction acts on high/low freq nodes ?
