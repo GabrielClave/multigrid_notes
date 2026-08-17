@@ -79,15 +79,17 @@ If $\|R\| < 1$, the error is forced to zero.
 \subsubsection*{Issue \& strength}
 Very slow convergence rate: good at the beginning, then stagnates.
 Able to remove high-frequency/oscillatory error, but can't deal with low frequency/smooth one.
+
+% diagram with high mode and low mode before/after smoother
 % \[
 %     e \approx Re \implies (I - M^{-1}N)e \approx 0 \implies Ae \approx 0
 % \]
 % The error is in the kernel of $A$.
+
+idea for Jacobi
 \[
     e^{(k+1)} = R^{k}e^{(0)}
 \]
-
-idea for Jacobi
 
 \begin{align*}
     R & = D^{-1}(L+U) \\
@@ -155,7 +157,7 @@ In the algebraic case, assuming the interpolation
     \begin{itemize}
         \item Relax on the residual equation $A_{c}e_{c} = r_{c}$ on the coarse grid to obtain an approximation to the error $e_{c}$.
     \end{itemize}
-    \item Correct the approximation with the error estimate $v \leftarrow v + e_{c}$.
+    \item Correct the approximation with the error estimate $v \leftarrow v + Pe_{c}$.
 \end{itemize}
 
 \subsection*{V-cycle}
@@ -166,7 +168,7 @@ In the algebraic case, assuming the interpolation
     \begin{itemize}
         \item Recursively solve $A_{c}e_{c} = r_{c}$ on the coarse grid
     \end{itemize}
-    \item Correct the approximation with the error estimate $v \leftarrow v + e_{c}$.
+    \item Correct the approximation with the error estimate $v \leftarrow v + Pe_{c}$.
 \end{itemize}
 
 \subsection*{Full multigrid cycle}
@@ -196,7 +198,7 @@ We can show that
 We want the multigrid cycle to reduce $e^{h}$ down to $ O(h^{p})$, for a sufficiently low $h$.
 
 For a problem with $n^{d}$ unknown and $h = \frac{1}{n}$.
-Each multigrid cycle reduce the error by a factor of $\gamma$, independent of $n$.
+Each multigrid cycle reduce the error by a factor of $\gamma$, independent of $n$. %proof ?
 
 We need k cycles, with $\gamma^{k} = O(n^{-p})$ ie $k = O(\log(n))$
 
@@ -217,7 +219,7 @@ assuming all but the finest grid have been solved, the initial error is:
     \mathbf{e}_0^h = \mathbf{u}^h - P \mathbf{v}^{2h}.
 \]
 
-We also assume the interpolation error is bounded as:
+We also assume the interpolation error is bounded as: %proof ?
 \[
     \|\mathbf{u}^h - P \mathbf{u}^{2h}\|_{A^h} \le K\alpha h^p,
 \]
@@ -236,6 +238,7 @@ noting that
 we are left with an $O(1)$ factor to eliminate, which requires $O(1)$ cycles
 
 The cost per FMG-cycle is $O(n^{d})$ giving a total cost of $ O(N)$
+
 \subsection*{Spectral insight}
 
 the restriction from a grid of $2p + 1$ points to a grid of $p$ points is an operator with full rank $p$, and null $p+1$
@@ -283,6 +286,23 @@ $\Pi = P{(P^{\top}AP)}^{-1}P^{\top}A$ is the $A$-orthogonal projection on $\rang
 $TG_{0} = I - \Pi$ is the $A$-orthogonal projection on $\range{(P)}^{\perp_A} = \nul(P^{T}A)$
 
 % why are low freq close to Im P ?
+
+with the decomposition:
+\[
+V = \range{(P)} \oplus_{A} \nul(P^{T}A)
+\]
+
+the effect of the Two-grid operator is to remove the component along $\range{(P)}$
+
+Now if we use the (Fourier) decomposition of V into low and high frequency components:
+\[
+V = L \oplus H
+\]
+
+The effect of the (ideal) relaxation is to remove the high frequency components.
+
+The efficiency of multigrid lies in the near alignement of the low frequency space and the range of interpolation
+
 % final graph
 
 \end{document}
