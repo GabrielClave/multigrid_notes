@@ -245,6 +245,7 @@ the restriction from a grid of $2p + 1$ points to a grid of $p$ points is an ope
 
 - smooth modes becomes smooth nodes \\ 
 - high frequencies cannot be represented on the coarse grid: oscillatory modes becomes smooth nodes
+% this means you don't even need to suppress the highest frequencies
 
 % action of restriction on modes
 
@@ -302,6 +303,46 @@ V = L \oplus H
 The effect of the (ideal) relaxation is to remove the high frequency components.
 
 The efficiency of multigrid lies in the near alignement of the low frequency space and the range of interpolation
+
+\section{Non-linear multigrid}
+
+we want to solve
+\[
+F(u) = 0
+\]
+
+\subsection*{Newton's multigrid}
+
+from the guess v, we have:
+\[
+F(v + dv) = F(v) + dF_{v}dv + O(\|dv\|^{2})
+\]
+
+if $v + dv$ is the solution, ad we neglect the high order terms:
+\[
+dv = -dF_{v}^{-1}F(v)
+\]
+
+You can solve the linear problem for $dF_{v}dv = -F(v)$ using classic multigrid
+
+\subsection*{Full approximation scheme}
+
+The residual equation is more difficult:
+\[
+A(v + e) - A(v) = r
+\]
+
+when projected on the coarse space:
+\[
+A(P^{\top}v + e_{c}) - A(P^{\top}v) = P^{\top}r
+\]
+
+you recursively solve the non-linear problem
+
+\[
+A(u_{c}) = A(P^{\top}v) + P^{\top}r
+\]
+
 
 % final graph
 

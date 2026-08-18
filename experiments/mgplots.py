@@ -1,7 +1,4 @@
-import matplotlib.pyplot as plt
-
-# Force crisp, high-DPI inline rendering in Jupyter interactive window
-plt.rcParams["figure.dpi"] = 150
+# brought to you by llm
 
 import numpy as np
 import pandas as pd
@@ -16,8 +13,13 @@ from plotnine import (
     scale_color_manual,
     theme,
     theme_bw,
+    geom_point,
+    facet_wrap,
+    scale_x_continuous
 )
 import scipy.sparse as sp
+
+###### Smoother effect 
 
 # 1. Discretization Setup
 N = 100
@@ -111,3 +113,189 @@ plot = (
 )
 
 plot
+
+###### coarse grid effect
+
+# 1. Setup Grids
+N_h = 31  # Fine grid interior points
+x_h = np.linspace(0, 1, N_h + 2)  # Include boundary points 0 and 1
+x_H = x_h[::2]  # Coarse grid: 1 point every 2 fine points
+
+# High-resolution grid for smooth background sine wave
+x_dense = np.linspace(0, 1, 500)
+
+# Mode definition: Oscillatory mode k = 24 (high frequency on fine grid)
+k = 8
+v_dense = np.sin(k * np.pi * x_dense)
+v_h = np.sin(k * np.pi * x_h)
+v_H = np.sin(k * np.pi * x_H)
+
+# Interpolation back to fine grid
+v_interp = np.interp(x_h, x_H, v_H)
+
+# ==============================================================================
+# Plot 1: Sampling aligned with continuous sine in the background
+# ==============================================================================
+# Data for discrete grid points
+df_discrete = pd.concat([
+    pd.DataFrame({
+        "x": x_h,
+        "y": v_h,
+        "grid": f"1. Fine Grid (h): {len(x_h)} points",
+    }),
+    pd.DataFrame({
+        "x": x_H,
+        "y": v_H,
+        "grid": f"2. Coarse Grid (H): {len(x_H)} points",
+    }),
+])
+
+df_discrete["grid"] = pd.Categorical(
+    df_discrete["grid"],
+    categories=[
+        f"1. Fine Grid (h): {len(x_h)} points",
+        f"2. Coarse Grid (H): {len(x_H)} points",
+    ],
+    ordered=True,
+)
+
+# Data for continuous background sine wave across both facets
+df_background = pd.concat([
+    pd.DataFrame({
+        "x": x_dense,
+        "y": v_dense,
+        "grid": f"1. Fine Grid (h): {len(x_h)} points",
+    }),
+    pd.DataFrame({
+        "x": x_dense,
+        "y": v_dense,
+        "grid": f"2. Coarse Grid (H): {len(x_H)} points",
+    }),
+])
+
+df_background["grid"] = pd.Categorical(
+    df_background["grid"],
+    categories=[
+        f"1. Fine Grid (h): {len(x_h)} points",
+        f"2. Coarse Grid (H): {len(x_H)} points",
+    ],
+    ordered=True,
+)
+
+plot_sampling = (
+    ggplot()
+    + geom_hline(yintercept=0, linetype="dashed", color="#aaaaaa")
+    # Continuous background sine wave
+    + geom_line(
+        df_background,
+        aes(x="x", y="y"),
+        color="#666464ac",
+        size=0.8,
+    )
+    # Grid points
+    + geom_point(df_discrete, aes(x="x", y="y", color="grid"), size=2.0)
+    + facet_wrap("~grid", ncol=1)
+    + scale_color_manual(values=["#e41a1c", "#377eb8"], guide=None)
+    + scale_x_continuous(breaks=[0, 0.25, 0.5, 0.75, 1.0], expand=(0, 0))
+    + labs(
+        title=f"Coarse Grid Sampling & Aliasing Effect (k = {k})",
+        x="Spatial Coordinate x",
+        y="Amplitude",
+    )
+    + theme_bw()
+    + theme(
+        figure_size=(10, 5),
+        strip_text=element_text(size=11, weight="bold"),
+        title=element_text(size=13, weight="bold"),
+        panel_grid_major_x=element_text(color="#eeeeee"),
+        panel_spacing_y=0.08,
+    )
+)
+
+plot_sampling
+
+
+# ==============================================================================
+# Plot 2: Superposition showing Aliasing / Frequency Misalignment
+# ==============================================================================
+# Mapping dense x coordinates [0, 1] to index space for background plotting
+idx_dense_h = x_dense * (len(x_h) - 1)
+idx_dense_H = x_dense * (len(x_H) - 1)
+
+df_super_bg = pd.concat([
+    pd.DataFrame({
+        "point_index": idx_dense_h,
+        "y": v_dense,
+        "type": "Fine Grid Signal (h)",
+    }),
+    pd.DataFrame({
+        "point_index": idx_dense_H,
+        "y": v_dense,
+        "type": "Coarse Grid Signal (H - stops at index 16)",
+    }),
+])
+
+df_super_points = pd.concat([
+    pd.DataFrame({
+        "point_index": np.arange(len(x_h)),
+        "y": v_h,
+        "type": "Fine Grid Signal (h)",
+    }),
+    pd.DataFrame({
+        "point_index": np.arange(len(x_H)),
+        "y": v_H,
+        "type": "Coarse Grid Signal (H - stops at index 16)",
+    }),
+])
+
+color_fine_line = "#cf4d4dff"  # Background wave color for fine grid (e.g., orange)
+color_coarse_line = "#6481a77b"  # Background wave color for coarse grid (e.g., purple)
+
+color_fine_point = "#e41a1c"  # Discrete point color for fine grid (red)
+color_coarse_point = "#377eb8"  # Discrete point color for coarse grid (blue)
+
+plot_superposition_index = (
+    ggplot()
+    + geom_hline(yintercept=0, linetype="dashed", color="#aaaaaa")
+    # Smooth continuous sine waves with independent line colors
+    + geom_line(
+        df_super_bg[df_super_bg["type"] == "Fine Grid Signal (h)"],
+        aes(x="point_index", y="y"),
+        color=color_fine_line,
+        size=0.9,
+    )
+    + geom_line(
+        df_super_bg[
+            df_super_bg["type"]
+            == "Coarse Grid Signal (H - stops at index 16)"
+        ],
+        aes(x="point_index", y="y"),
+        color=color_coarse_line,
+        size=0.9,
+    )
+    # Discrete grid points with their own mapped colors for the legend
+    + geom_point(
+        df_super_points,
+        aes(x="point_index", y="y", color="type"),
+        size=2.2,
+    )
+    + scale_color_manual(
+        values=[color_coarse_point, color_fine_point],
+        name="Grid Points",
+    )
+    + labs(
+        title=f"Superposition by Index: Frequency Doubling Effect (k = {k})",
+        x="Grid Point Index (i)",
+        y="Amplitude",
+    )
+    + theme_bw()
+    + theme(
+        figure_size=(10, 5),
+        title=element_text(size=13, weight="bold"),
+        legend_position="bottom",
+        legend_title=element_text(size=10, weight="bold"),
+        panel_grid_major_x=element_text(color="#eeeeee"),
+    )
+)
+
+plot_superposition_index
