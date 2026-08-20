@@ -44,17 +44,22 @@ $u$ is a stationary point:
     u = M^{-1}Nu + M^{-1}f
 \]
 
-With $R = M^{-1}N$, we use the iteration:
+With $S = M^{-1}N = I - M^{-1}A$, we use the iteration:
 \[
-    v^{(k+1)} = Rv^{(k)} + M^{-1}f
+    v^{(k+1)} = Sv^{(k)} + M^{-1}f
 \]
 
-Using $M^{-1}f = u - Ru$, we get:
+Using $M^{-1}f = u - Su$, we get:
 \[
-    e^{(k+1)} = Re^{(k)} = R^{k}e^{(0)}
+    e^{(k+1)} = Se^{(k)} = S^{k}e^{(0)}
 \]
 
-If $\|R\| < 1$, the error is forced to zero.
+If $\|S\| < 1$, the error is forced to zero.
+
+the iterate can also be expressed as:
+\[
+    v^{(k+1)} = v^{(k)} + M^{-1}r
+\]
 
 \subsubsection*{Examples (for matrices with nonzero diagonal)}
 \begin{itemize}
@@ -86,25 +91,25 @@ Able to remove high-frequency/oscillatory error, but can't deal with low frequen
 % \]
 % The error is in the kernel of $A$.
 
-idea for Jacobi
-\[
-    e^{(k+1)} = R^{k}e^{(0)}
-\]
+% idea for Jacobi
+% \[
+%     e^{(k+1)} = R^{k}e^{(0)}
+% \]
 
-\begin{align*}
-    R & = D^{-1}(L+U) \\
-    & = D^{-1}(D - A) \\
-    R & = I - \frac{1}{2}A
-\end{align*}
+% \begin{align*}
+%     R & = D^{-1}(L+U) \\
+%     & = D^{-1}(D - A) \\
+%     R & = I - \frac{1}{2}A
+% \end{align*}
 
-In a 1D poisson with $n-1$ points, the eigenvalues of $A$ are $\lambda_{k} = 4\sin^{2}(\frac{k\pi}{2n})$
-and the eigenvectors are \dots
+% In a 1D poisson with $n-1$ points, the eigenvalues of $A$ are $\lambda_{k} = 4\sin^{2}(\frac{k\pi}{2n})$
+% and the eigenvectors are \dots
 
-picture
+% picture
 
-weighted Jacobi
+% weighted Jacobi
 
-composyx example
+% composyx example
 
 \subsubsection*{Coarse grid}
 
@@ -257,20 +262,20 @@ the interpolation from a grid of $p$ points to a grid of $2p + 1$ points is an o
 
 \textbf{two-grid correction scheme}
 \begin{align*}
-    \text{Relax q times:}      \quad & e \leftarrow R^{q}e \\
+    \text{Relax q times:}      \quad & e \leftarrow S^{q}e \\
     \text{Compute residuals:}  \quad & r = f - Av \\
     \text{Restrict:}           \quad & r_{c} = P^{\top}r \\
     \text{Coarse solve:}       \quad & e_{c} = A_{c}^{-1}r_{c} \\
     \text{Interpolate:}        \quad & e_{c}^{fine} = Pe_{c} \\
-    \text{Correct:}            \quad & e \leftarrow e - e_{c}^{fine}
+    \text{Correct:}            \quad & e \leftarrow e - e_{c}^{fine} \\ 
 \end{align*}
 
 \[
-    e \leftarrow e - PA_{c}^{-1}P^{\top}AR^{q}e \\
+    e \leftarrow e - PA_{c}^{-1}P^{\top}AS^{q}e \\
 \]
 
 \[
-    TG_{q} = (I - P{(P^{\top}AP)}^{-1}P^{\top}A)R^{q} \\
+    TG_{q} = (I - P{(P^{\top}AP)}^{-1}P^{\top}A)S^{q} \\
 \]
 
 % action of two-grid operator on modes
@@ -279,7 +284,8 @@ the interpolation from a grid of $p$ points to a grid of $2p + 1$ points is an o
 $TG_{0}$ suppresses the smooth components of the error.
 
 $TG_{q}$ suppresses the error.
-
+% final graph
+    
 \subsection*{algebraic insight}
 
 $\Pi = P{(P^{\top}AP)}^{-1}P^{\top}A$ is the $A$-orthogonal projection on $\range{(P)}$
@@ -302,7 +308,7 @@ V = L \oplus H
 
 The effect of the (ideal) relaxation is to remove the high frequency components.
 
-The efficiency of multigrid lies in the near alignement of the low frequency space and the range of interpolation
+The efficiency of multigrid relies on the near alignement of the low frequency space and the range of interpolation
 
 \section{Non-linear multigrid}
 
@@ -343,8 +349,60 @@ you recursively solve the non-linear problem
 A(u_{c}) = A(P^{\top}v) + P^{\top}r
 \]
 
+\section{algebraic multi grid}
 
-% final graph
+There is no grid: location are unknown or inexistant.
+we choose a relaxation method. An error is algebraically smooth when it is not reduced by the smoother.
+
+\begin{align*}
+      & Se \approx  e \\ 
+ \iff & (I - M^{-1}N)e \approx  0 \\ 
+ \iff & (M - N)e \approx  0 \\ 
+ \iff & Ae = r \approx  0 \\ 
+\end{align*}
+
+$e_{i}$ is approximated by a weighted average of its neighbors. We focus on the biggest contribution, ie the highest $|a_{ij}|$
+
+strong dependence:
+\[
+|a_{ij}| \ge \theta \max_{i \ne k}{|a_{ik}|}
+\]
+
+if j strongly influence i, it's a good candidate for the interpolation.
+% look for a better geometric explanation
+
+just like in the geometric case, when the error is smooth, local (= strong influence) variation are small.
+
+In classic AMG, the interpolation is given by:
+
+\begin{equation*}
+    {(P \mathbf{e})}i = 
+    \begin{cases}
+        \hfill e_i & \text{if } i \in C, \\[8pt]
+        \displaystyle \sum_{j \in C_i} \omega_{ij} e_j & \text{if } i \in F
+    \end{cases}
+\end{equation*}
+
+Coarse grid values are directly used. The other are inferred from their strong connexion with the coarse grid.
+
+Once the interpolation is build, the restriction and coarse operator are defined as:
+
+\begin{align*}
+      & R = P^{\top} \\ 
+      & A_{c} = P^{\top}AP
+\end{align*}
+
+This way the correction is optimal in the A-norm:
+
+\begin{align*}
+      \|TGe\|_{A} = \|e - \Pi_{A}e\|_{A} & = \min_{w \in \range(P)}{\|e - w\|_{A}} \\ 
+                    \|e - Pe_{c}\|_{A}   & = \min_{x \in \Omega_{c}}{\|e - Px\|_{A}}
+\end{align*}
+
+
+by property of the $A$-orthogonal projection on $\range(P)$ $\Pi_{A}$
+
+
 
 \end{document}
 
