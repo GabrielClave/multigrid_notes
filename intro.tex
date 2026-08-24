@@ -352,6 +352,9 @@ A(u_{c}) = A(P^{\top}v) + P^{\top}r
 \section{algebraic multi grid}
 
 There is no grid: location are unknown or inexistant.
+
+\subsection*{algebraic smooth error}
+
 we choose a relaxation method. An error is algebraically smooth when it is not reduced by the smoother.
 
 \begin{align*}
@@ -360,6 +363,70 @@ we choose a relaxation method. An error is algebraically smooth when it is not r
  \iff & (M - N)e \approx  0 \\ 
  \iff & Ae = r \approx  0 \\ 
 \end{align*}
+
+more rigorously if the smoother satisfies the smoothing property:
+
+we have $\|r\|_{D^{-1}} \ll  \|e\|_{A}$
+
+\begin{align*}
+    \|e\|_{A}^{2} & = \langle Ae, e \rangle \\
+                  & =  \langle D^{-\frac{1}{2}}Ae, D^{\frac{1}{2}}e \rangle \\
+                  & \le \| D^{-\frac{1}{2}}Ae \|_{2} \| D^{\frac{1}{2}}e \| \\
+                  & \le \| r \|_{D^{-1}} \| e \|_{D}
+\end{align*}
+
+meaning we have $ \|e\|_{A} \ll \|e\|_{D}$ or $\langle Ae,e \rangle \ll \langle De, e \rangle  $
+
+for some smooth error $s = D^{\frac{1}{2}}e$
+
+we have $ \langle Ae,e \rangle = s^{\top}D^{-\frac{1}{2}}AD^{-\frac{1}{2}}s $ and $\langle De, e \rangle = s^{\top}s $
+
+meaning
+\begin{align*}
+      & s^{\top}\hat{A} s \ll  s^{\top}s \\ 
+ \iff & \frac{s^{\top}\hat{A} s}{s^{\top}s} \ll 1 \\ 
+ \iff & r_{\hat{A}}(s) \ll 1 \\ 
+\end{align*}
+
+with $\hat{A} = D^{-\frac{1}{2}}AD^{-\frac{1}{2}}$
+
+the Rayleigh quotient of a smooth error is small.
+
+This means that small error are a combination of eigenvectors of $\hat{A}$ with small eigenvalues.
+
+% but it is \hat{A} and not A and s and not e ?
+% TODO look at: generalized eigenvalue problem
+
+\subsubsection*{Spectral insight}
+
+we want to compare $\|r\|_{D^{-1}} $ and $\|e\|_{A} = \langle Ae,e \rangle$ when $e$ is a smooth error.
+
+\[
+\langle Ae,e \rangle = \langle \hat{A}s,s \rangle = \sum_{k}{\lambda_{k}c_{k}^{2}}
+\]
+using an eigenvector basis of $\hat{A}$
+
+and
+\[
+\|r\|_{D^{-1}} = \|Ae\|_{D^{-1}} = \|D^{-\frac{1}{2}}Ae\|_{2} = \|\hat{A}s\|_{2}
+\]
+
+if the smoother is effective, only components of eigenvectors of $\hat{A}$ with small eigenvalues remain, ie:
+
+\[
+\|r\|_{D^{-1}}^{2} \approx \sum_{\lambda_{k} \le \epsilon}{\lambda_{k}^{2}c_{k}^{2}} \le \epsilon \sum_{\lambda_{k} \le \epsilon}{\lambda_{k}c_{k}^{2}} \approx \epsilon \langle Ae,e \rangle
+\]
+
+ie
+
+\[
+\|r\|_{D^{-1}} \le \sqrt{\epsilon}\|e\|_{A}
+\]
+
+if the smoother is effective $\sqrt{\epsilon} \ll 1$ and we have $\|r\|_{D^{-1}} \ll  \|e\|_{A}$
+
+\subsection*{classic AMG}
+
 
 $e_{i}$ is approximated by a weighted average of its neighbors. We focus on the biggest contribution, ie the highest $|a_{ij}|$
 
