@@ -61,6 +61,8 @@ the iterate can also be expressed as:
     v^{(k+1)} = v^{(k)} + M^{-1}r
 \]
 
+% look for more general case with preconditioner
+
 \subsubsection*{Examples (for matrices with nonzero diagonal)}
 \begin{itemize}
     \item \textbf{Jacobi:} $A = D - L - U \quad M = D$
@@ -359,8 +361,8 @@ we choose a relaxation method. An error is algebraically smooth when it is not r
 
 \begin{align*}
       & Se \approx  e \\ 
- \iff & (I - M^{-1}N)e \approx  0 \\ 
- \iff & (M - N)e \approx  0 \\ 
+ \iff & \left(I - M^{-1}N\right)e \approx  0 \\ 
+ \iff & \left(M - N\right)e \approx  0 \\ 
  \iff & Ae = r \approx  0 \\ 
 \end{align*}
 
@@ -392,10 +394,27 @@ with $\hat{A} = D^{-\frac{1}{2}}AD^{-\frac{1}{2}}$
 
 the Rayleigh quotient of a smooth error is small.
 
-This means that small error are a combination of eigenvectors of $\hat{A}$ with small eigenvalues.
+This means that smooth errors are a combination of eigenvectors of $\hat{A}$ with small eigenvalues.
 
 % but it is \hat{A} and not A and s and not e ?
 % TODO look at: generalized eigenvalue problem
+
+\textbf{Connection with the smoother}
+
+\[
+s^{(k+1)} = D^{1/2}\left(I - M^{-1}A\right)D^{-1/2}s^{(k)} = \left(I - \hat{M}^{-1}\hat{A}\right)s^{(k)} = \hat{S}s^{(k)}
+\]
+
+Damped Jacobi: $M = \frac{1}{\omega}D$
+In this case, $\hat{M} = \frac{1}{\omega}I$
+
+The smoother operator simplifies to: $\hat{S} = I - \omega \hat{A}$
+
+The eigenvalues are $\lambda_i(\hat{S}) = 1 - \omega \lambda_i(\hat{A})$.
+
+For large eigenvalues of $\hat{A}$, $|\lambda_i(\hat{S})| \ll 1$: the smoother is effective
+
+For small eigenvalues, we get $\lambda_i(\hat{S}) \approx 1$: these components form the smooth error, unaffected by the iteration
 
 \subsubsection*{Spectral insight}
 

@@ -1,0 +1,450 @@
+\documentclass{beamer}
+
+\usepackage{listings}
+\usepackage{xcolor}
+\usepackage{amsmath, amssymb, amsfonts}
+
+\DeclareMathOperator{\range}{Range}
+\DeclareMathOperator{\nul}{Null}
+
+\lstset{
+    language=C++,
+    basicstyle=\ttfamily\small,
+    keywordstyle=\color{blue}\bfseries,
+    commentstyle=\color{teal}
+}
+
+\usetheme{metropolis}
+
+\title{Multigrid methods}
+\subtitle{a short introduction}
+\author{Gabriel Clave}
+\date{\today}
+
+\begin{document}
+
+\frame{\titlepage}
+
+% slide Notations
+\begin{frame}{Notations}
+\subsection*{Notations}
+Let $A \in \mathbb{R}^{n \times n}$ be non-singular and $f \in \mathbb{R}^n$.
+\begin{align*}
+    \text{Problem:}          \quad & Au = f \\
+    \text{Error:}            \quad & e = u - v \\
+    \text{Residual:}         \quad & r = f - Av \\
+    \text{Residual Problem:} \quad & Ae = r
+\end{align*}
+\end{frame}
+
+\section{Relaxation methods}
+
+% slide the smoother
+% at the origin of multigrid are the relaxation methods
+\begin{frame}{Relaxation Methods}
+\subsection*{Relaxation Methods}
+Decompose $A = M - N$, where $M$ is easy to invert:
+\[
+    Au = f \implies Mu = Nu + f
+\]
+
+$u$ is a fixed point of the operator:
+\[
+    u = M^{-1}Nu + M^{-1}f
+\]
+% this gives us an idea for an iteration
+With iteration matrix $S = M^{-1}N = I - M^{-1}A$:
+\[
+    v^{(k+1)} = Sv^{(k)} + M^{-1}f
+\]
+
+Using $M^{-1}f = u - Su$, the error evolution satisfies:
+\[
+    e^{(k+1)} = Se^{(k)} = S^{k}e^{(0)}
+\]
+If $\rho(S) < 1$, the error is forced to zero.
+\end{frame}
+
+% slide two classic examples
+\begin{frame}{Classic Relaxation Examples}
+\subsubsection*{Examples (for matrices with nonzero diagonal)}
+\begin{itemize}
+    \item \textbf{Jacobi:} Split $A = D - L - U$ with $M = D$.
+    \[
+        Dv^{(k+1)} = (L + U)v^{(k)} + f
+    \]
+    \[
+        a_{ii}v^{(k+1)}_{i} = \sum_{j \neq i} -a_{ij}v^{(k)}_{j} + f_{i}
+    \]
+    Solve for $v_{i}^{(k+1)}$ using only the previous estimate.
+
+    \vspace{0.5em}
+    \item \textbf{Gauss-Seidel:} Choose $M = D - L$.
+    \[
+        (D-L)v^{(k+1)} = Uv^{(k)} + f
+    \]
+    Solve for $v_{i}^{(k+1)}$ using already computed values at step $k+1$.
+\end{itemize}
+\end{frame}
+
+% slide Smoother alone aren't great
+\begin{frame}{Issues and Convergence Rates}
+\subsubsection*{Issue \& Strength}
+\[
+    e^{(k+1)} = Se^{(k)} = S^{k}e^{(0)}
+\]
+
+\begin{itemize}
+    \item Error components along eigenvectors corresponding to large eigenvalues of $S$ decay very slowly.
+    \item Convergence rate stagnates quickly after initial iterations.
+\end{itemize}
+
+\vspace{1em}
+\begin{center}
+    % [Insert picture: Convergence stagnation / Error norm vs iteration]
+\end{center}
+\end{frame}
+% used alone, relaxation methods are slow and expensive 
+
+% slide their strength lies in their ability to remove "high frequency error"
+\begin{frame}{Smoothing Property}
+\begin{itemize}
+    \item Relaxation methods are effective at damping \textbf{high-frequency / oscillatory} components of the error.
+    \item They are inefficient at eliminating \textbf{low-frequency / smooth} error components.
+\end{itemize}
+% for classic smoother, people realized it was the "oscillating" error that was effectively removed
+
+\vspace{2em}
+\begin{center}
+    % [Insert picture: High-frequency vs Low-frequency error smoothing]
+\end{center}
+\end{frame}
+
+% slide coarse grid to artificially increase the frequency
+\begin{frame}{Coarse Grid Concept}
+\subsubsection*{Coarse Grid}
+
+\textbf{Core Intuition:} Subsampling a smooth signal on a coarser grid turns low-frequency modes into high-frequency modes relative to the new mesh size.
+
+\vspace{2em}
+\begin{center}
+    % [Insert picture: Effect of subsampling on mode frequencies]
+\end{center}
+\end{frame}
+
+% slide idea
+\begin{frame}{Multigrid Idea \& Grid Transfers}
+\textbf{Recursive Procedure:}
+\begin{enumerate}
+    \item Apply relaxation on the fine grid until the error is smooth.
+    \item Project the smooth residual/error onto a coarser grid where it becomes oscillatory.
+    \item Perform relaxation on the coarse grid.
+    \item Correct the fine grid approximation.
+\end{enumerate}
+
+\vspace{1em}
+\textbf{Inter-grid Transfer Operators:}
+\begin{itemize}
+    \item \textbf{Interpolation / Prolongation ($P$):} Coarse $\to$ Fine
+    \item \textbf{Projection / Restriction ($R = P^\top$):} Fine $\to$ Coarse
+\end{itemize}
+\end{frame}
+
+% slide coarse grid
+\begin{frame}{Coarse Grid Operator Formulation}
+\subsubsection*{Coarse Grid Equations}
+On the coarse grid, we solve the residual equation:
+\[
+    A_{c}e_{c} = r_{c}
+\]
+
+\begin{itemize}
+    \item \textbf{Geometric Case:} The underlying continuous physics dictate the operator; $A_c$ is discretized directly on the coarse geometry.
+    \item \textbf{Algebraic Case (Galerkin approach):} Given prolongation $P$ and setting $e \approx Pe_{c}$:
+\end{itemize}
+\begin{align*}
+    Ae = r &\implies APe_{c} \approx r \\ 
+           &\implies P^{\top}APe_{c} = P^{\top}r
+\end{align*}
+
+Choosing $r_c = P^\top r$ yields the Galerkin coarse-grid operator:
+\[
+    A_{c} = P^{\top}AP
+\]
+\end{frame}
+
+\section{Basic Multigrid}
+
+% slide general idea
+\begin{frame}{Two-Grid Correction Scheme}
+\subsection*{General Idea}
+
+\begin{itemize}
+    \item \textbf{Pre-smoothing:} Relax on $Au = f$ on the fine grid to obtain an approximation $v$.
+    \item \textbf{Residual Computation:} Compute $r = f - Av$.
+    \item \textbf{Coarse Grid Solve:}
+    \begin{itemize}
+        \item Solve on the residual equation $A_{c}e_{c} = r_{c}$ on the coarse grid to obtain an error approximation $e_{c}$.
+    \end{itemize}
+    \item \textbf{Coarse Grid Correction:} Correct the approximation with $v \leftarrow v + Pe_{c}$.
+\end{itemize}
+\end{frame}
+
+% slide V-cycle
+\begin{frame}{Multigrid V-Cycle}
+\subsection*{V-Cycle}
+
+\begin{itemize}
+    \item \textbf{Pre-smoothing:} Relax on $Au = f$ on the fine grid to obtain an approximation $v$.
+    \item \textbf{Residual Computation:} Compute $r = f - Av$.
+    \item \textbf{Recursion:}
+    \begin{itemize}
+        \item Recursively solve $A_{c}e_{c} = r_{c}$ on the coarse grid
+        \item apply the same procedure down to the coarsest level.
+    \end{itemize}
+    \item \textbf{Coarse Grid Correction:} Correct the approximation on the fine grid: $v \leftarrow v + Pe_{c}$.
+    \item \textbf{Post-smoothing:} (Optional) Apply additional relaxation steps on $Au = f$.
+\end{itemize}
+\end{frame}
+
+% slide multigrid operator
+\begin{frame}{Two-Grid Operator Derivation}
+\subsection*{Two-Grid Operator}
+
+\begin{align*}
+    \text{Pre-smoothing ($q$ steps):} & \quad e \leftarrow S^{q}e \\
+    \text{Compute residual:}          & \quad r = Ae \\
+    \text{Restrict residual:}         & \quad r_{c} = P^{\top}r \\
+    \text{Exact coarse solve:}        & \quad e_{c} = A_{c}^{-1}r_{c} = {(P^{\top}AP)}^{-1}r_{c} \\
+    \text{Interpolate \& Correct:}    & \quad e \leftarrow e - Pe_{c}
+\end{align*}
+
+\vspace{0.5em}
+Combining these steps we get:
+\[
+    e \leftarrow (I - P{(P^{\top}AP)}^{-1}P^{\top}A)S^{q}e
+\]
+
+The \textbf{Two-Grid Error Operator} is:
+\[
+    TG_{q} = (I - P{(P^{\top}AP)}^{-1}P^{\top}A)S^{q}
+\]
+\end{frame}
+
+% slide algebraic insight
+\begin{frame}{Algebraic Insight}
+\subsection*{Algebraic Insight}
+
+\[
+    TG_{q} = (I - P{(P^{\top}AP)}^{-1}P^{\top}A)S^{q}
+\]
+
+$\Pi = P{(P^{\top}AP)}^{-1}P^{\top}A$ is the $A$-orthogonal projection onto $\range(P)$.
+
+\begin{itemize}
+    \item $TG_{0} = I - \Pi$ is the $A$-orthogonal projection onto $\range(P)^{\perp_A} = \nul(P^{\top}A)$.
+    \item Direct sum decomposition: $V = \range(P) \oplus_{A} \nul(P^{\top}A)$.
+    \item The coarse grid correction eliminates the error component along $\range(P)$.
+\end{itemize}
+
+\end{frame}
+
+\begin{frame}{Algebraic Insight}
+
+The coarse grid correction $TG_{0} = I - \Pi$ eliminates the error component along $\range(P)$.
+
+\vspace{0.5em}
+\textbf{Complementary Mechanism:}
+\begin{itemize}
+    \item Decomposition into Fourier modes: $V = L \oplus H$ (low and high frequencies).
+    \item Relaxation $S^q$ eliminates high-frequency components ($H$).
+    \item Efficiency relies on the near-alignment of low frequencies and range of prolongation:
+    \[
+        L \approx \range(P)
+    \]
+\end{itemize}
+\end{frame}
+
+% slide Spectral insight
+\begin{frame}{Spectral Insight}
+\subsection*{Spectral Insight}
+
+\textbf{Action of the Two-Grid Operator on Modes:}
+
+\begin{itemize}
+    \item \textbf{Coarse Grid Correction alone ($TG_0$):}
+    \begin{itemize}
+        \item Suppresses smooth / low-frequency components of the error.
+        \item Leaves high-frequency components largely untouched.
+    \end{itemize}
+    
+    \vspace{0.5em}
+    % picture
+
+\end{itemize}
+\end{frame}
+
+\begin{frame}{Spectral Insight}
+\subsection*{Spectral Insight}
+
+\textbf{Action of the Two-Grid Operator on Modes:}
+
+\begin{itemize}
+    
+    \item \textbf{Combined Two-Grid Operator ($TG_q = TG_0 S^q$):}
+    \begin{itemize}
+        \item $S^q$ damps high frequencies.
+        \item $TG_0$ eliminates low frequencies.
+        \item Result: Uniform suppression of all error components across the spectrum.
+    \end{itemize}
+\end{itemize}
+\end{frame}
+
+% slide final graph
+\begin{frame}{Summary Scheme}
+\subsection*{Summary Scheme}
+
+\begin{center}
+    % [Insert graph: Spectrum / Error reduction comparison]
+    % e.g., Plots showing error spectrum for S^q, TG_0, and TG_q
+\end{center}
+\end{frame}
+
+% \section{algebraic multi grid}
+
+% There is no grid: location are unknown or inexistant.
+
+% \subsection*{algebraic smooth error}
+
+% we choose a relaxation method. An error is algebraically smooth when it is not reduced by the smoother.
+
+% \begin{align*}
+%       & Se \approx  e \\ 
+%  \iff & \left(I - M^{-1}N\right)e \approx  0 \\ 
+%  \iff & \left(M - N\right)e \approx  0 \\ 
+%  \iff & Ae = r \approx  0 \\ 
+% \end{align*}
+
+% more rigorously if the smoother satisfies the smoothing property:
+
+% we have $\|r\|_{D^{-1}} \ll  \|e\|_{A}$
+
+% \begin{align*}
+%     \|e\|_{A}^{2} & = \langle Ae, e \rangle \\
+%                   & =  \langle D^{-\frac{1}{2}}Ae, D^{\frac{1}{2}}e \rangle \\
+%                   & \le \| D^{-\frac{1}{2}}Ae \|_{2} \| D^{\frac{1}{2}}e \| \\
+%                   & \le \| r \|_{D^{-1}} \| e \|_{D}
+% \end{align*}
+
+% meaning we have $ \|e\|_{A} \ll \|e\|_{D}$ or $\langle Ae,e \rangle \ll \langle De, e \rangle  $
+
+% for some smooth error $s = D^{\frac{1}{2}}e$
+
+% we have $ \langle Ae,e \rangle = s^{\top}D^{-\frac{1}{2}}AD^{-\frac{1}{2}}s $ and $\langle De, e \rangle = s^{\top}s $
+
+% meaning
+% \begin{align*}
+%       & s^{\top}\hat{A} s \ll  s^{\top}s \\ 
+%  \iff & \frac{s^{\top}\hat{A} s}{s^{\top}s} \ll 1 \\ 
+%  \iff & r_{\hat{A}}(s) \ll 1 \\ 
+% \end{align*}
+
+% with $\hat{A} = D^{-\frac{1}{2}}AD^{-\frac{1}{2}}$
+
+% the Rayleigh quotient of a smooth error is small.
+
+% This means that smooth errors are a combination of eigenvectors of $\hat{A}$ with small eigenvalues.
+
+% % but it is \hat{A} and not A and s and not e ?
+% % TODO look at: generalized eigenvalue problem
+
+% \textbf{Connection with the smoother}
+
+% \[
+% s^{(k+1)} = D^{1/2}\left(I - M^{-1}A\right)D^{-1/2}s^{(k)} = \left(I - \hat{M}^{-1}\hat{A}\right)s^{(k)} = \hat{S}s^{(k)}
+% \]
+
+% Damped Jacobi: $M = \frac{1}{\omega}D$
+% In this case, $\hat{M} = \frac{1}{\omega}I$
+
+% The smoother operator simplifies to: $\hat{S} = I - \omega \hat{A}$
+
+% The eigenvalues are $\lambda_i(\hat{S}) = 1 - \omega \lambda_i(\hat{A})$.
+
+% For large eigenvalues of $\hat{A}$, $|\lambda_i(\hat{S})| \ll 1$: the smoother is effective
+
+% For small eigenvalues, we get $\lambda_i(\hat{S}) \approx 1$: these components form the smooth error, unaffected by the iteration
+
+% \subsubsection*{Spectral insight}
+
+% we want to compare $\|r\|_{D^{-1}} $ and $\|e\|_{A} = \langle Ae,e \rangle$ when $e$ is a smooth error.
+
+% \[
+% \langle Ae,e \rangle = \langle \hat{A}s,s \rangle = \sum_{k}{\lambda_{k}c_{k}^{2}}
+% \]
+% using an eigenvector basis of $\hat{A}$
+
+% and
+% \[
+% \|r\|_{D^{-1}} = \|Ae\|_{D^{-1}} = \|D^{-\frac{1}{2}}Ae\|_{2} = \|\hat{A}s\|_{2}
+% \]
+
+% if the smoother is effective, only components of eigenvectors of $\hat{A}$ with small eigenvalues remain, ie:
+
+% \[
+% \|r\|_{D^{-1}}^{2} \approx \sum_{\lambda_{k} \le \epsilon}{\lambda_{k}^{2}c_{k}^{2}} \le \epsilon \sum_{\lambda_{k} \le \epsilon}{\lambda_{k}c_{k}^{2}} \approx \epsilon \langle Ae,e \rangle
+% \]
+
+% ie
+
+% \[
+% \|r\|_{D^{-1}} \le \sqrt{\epsilon}\|e\|_{A}
+% \]
+
+% if the smoother is effective $\sqrt{\epsilon} \ll 1$ and we have $\|r\|_{D^{-1}} \ll  \|e\|_{A}$
+
+% \subsection*{classic AMG}
+
+
+% $e_{i}$ is approximated by a weighted average of its neighbors. We focus on the biggest contribution, ie the highest $|a_{ij}|$
+
+% strong dependence:
+% \[
+% |a_{ij}| \ge \theta \max_{i \ne k}{|a_{ik}|}
+% \]
+
+% if j strongly influence i, it's a good candidate for the interpolation.
+% % look for a better geometric explanation
+
+% just like in the geometric case, when the error is smooth, local (= strong influence) variation are small.
+
+% In classic AMG, the interpolation is given by:
+
+% \begin{equation*}
+%     {(P \mathbf{e})}i = 
+%     \begin{cases}
+%         \hfill e_i & \text{if } i \in C, \\[8pt]
+%         \displaystyle \sum_{j \in C_i} \omega_{ij} e_j & \text{if } i \in F
+%     \end{cases}
+% \end{equation*}
+
+% Coarse grid values are directly used. The other are inferred from their strong connexion with the coarse grid.
+
+% Once the interpolation is build, the restriction and coarse operator are defined as:
+
+% \begin{align*}
+%       & R = P^{\top} \\ 
+%       & A_{c} = P^{\top}AP
+% \end{align*}
+
+% This way the correction is optimal in the A-norm:
+
+% \begin{align*}
+%       \|TGe\|_{A} = \|e - \Pi_{A}e\|_{A} & = \min_{w \in \range(P)}{\|e - w\|_{A}} \\ 
+%                     \|e - Pe_{c}\|_{A}   & = \min_{x \in \Omega_{c}}{\|e - Px\|_{A}}
+% \end{align*}
+
+
+% by property of the $A$-orthogonal projection on $\range(P)$ $\Pi_{A}$
+
+\end{document}
