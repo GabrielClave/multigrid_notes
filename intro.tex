@@ -2,6 +2,7 @@
 \usepackage[utf8]{inputenc}
 \usepackage{amsmath, amsthm}
 \usepackage{parskip}
+\usepackage{graphicx}
 
 \usepackage[french]{babel}
 
@@ -312,6 +313,8 @@ The effect of the (ideal) relaxation is to remove the high frequency components.
 
 The efficiency of multigrid relies on the near alignement of the low frequency space and the range of interpolation
 
+\includegraphics{pictures/Convergence4.png}
+
 \section{Non-linear multigrid}
 
 we want to solve
@@ -444,8 +447,66 @@ ie
 
 if the smoother is effective $\sqrt{\epsilon} \ll 1$ and we have $\|r\|_{D^{-1}} \ll  \|e\|_{A}$
 
-\subsection*{classic AMG}
+\subsubsection*{Convergence analysis}
 
+Convergence of a multigrid method requires two hypothesis:
+
+\textbf{The Smoothing Property}: The smoother $S$ reduces high-frequency errors
+\[
+    \|S e\|_{A}^2 \le \|e\|_{A}^2 - \alpha \|A e\|_{D^{-1}}^2
+\]
+% see in Hackbusch
+
+\begin{itemize}
+    \item This implies $S$ is a contraction in the $A$-norm, and the relaxation would converge
+    \item it is a bit stronger
+\end{itemize}
+
+\textbf{The Approximation Property}: The coarse grid can approximate smooth errors
+
+\[
+\min_{u_c} \|e - P u_c\|_D^2 \le \beta \|e\|_{A}^2
+\]
+
+\begin{itemize}
+    \item if the error is oscillatory, $\|e\|_{A}$ is huge, and the inequality is easily satisfied, regardless of the quality of the interpolation
+    \item if $e$ is a smooth error, the interpolation needs to accurately represent it (smooth errors must be close to the $\range(P)$)
+\end{itemize}
+
+% the role of the smoother is to take care of everything not in range(P). The 2-grid operator will take care of the rest.
+
+\textbf{Convergence theorem}
+
+if $\alpha \le \beta$ the iteration converges, with $\| STG \|_A \le \sqrt{1 - \frac{\alpha}{\beta}}$
+
+proof:
+
+by the smoothing property,
+\[
+    \|S TGe\|_{A}^2 \le \|TGe\|_{A}^2 - \alpha \|A TGe\|_{D^{-1}}^2
+\]
+using $ V = \range{(P)} \oplus_{A} \nul(P^{T}A) $
+
+for $s = TGe $ in $\range(TG)$, we have $\langle As,Ps\rangle = 0$
+\begin{align*}
+    \|s\|_A^2 & = \langle As,s - Ps\rangle \\
+              & = \langle D^{-\frac{1}{2}}As,D^{\frac{1}{2}}(s - Ps)\rangle \\
+    \|s\|_A^2 & \le \|As\|_{D^{-1}}\|s - Ps\|_D \qquad & \text{Cauchy-Schwartz} \\
+    \|s\|_A^2 & \le \|As\|_{D^{-1}}\beta\|s\|_A & \text{Approximation Property} \\
+    \|TGe\|_A & \le \beta \|ATGe\|_{D^{-1}} & s \in \range(TG), \quad e \in \Omega
+\end{align*}
+
+\begin{align*}
+    \|S TGe\|_{A}^2 & \le \|TGe\|_{A}^2 - \alpha \|A TGe\|_{D^{-1}}^2 \\
+                    & \le \|TGe\|_{A}^2 - \frac{\alpha}{\beta}\|TGe\|_{A}^2 \\ 
+                    & \le (1 - \frac{\alpha}{\beta})\|TGe\|_{A}^2 \\
+    \|S TGe\|_{A}^2 & \le (1 - \frac{\alpha}{\beta})\|e\|_{A}^2 \qquad & \|TG\| \le 1
+\end{align*}
+
+% is TG the projection or there is the pre-smoothing too ?
+% does not change the proof
+
+\subsection*{classic AMG}
 
 $e_{i}$ is approximated by a weighted average of its neighbors. We focus on the biggest contribution, ie the highest $|a_{ij}|$
 
