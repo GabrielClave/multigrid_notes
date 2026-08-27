@@ -315,46 +315,7 @@ The efficiency of multigrid relies on the near alignement of the low frequency s
 
 \includegraphics{pictures/Convergence4.png}
 
-\section{Non-linear multigrid}
-
-we want to solve
-\[
-F(u) = 0
-\]
-
-\subsection*{Newton's multigrid}
-
-from the guess v, we have:
-\[
-F(v + dv) = F(v) + dF_{v}dv + O(\|dv\|^{2})
-\]
-
-if $v + dv$ is the solution, ad we neglect the high order terms:
-\[
-dv = -dF_{v}^{-1}F(v)
-\]
-
-You can solve the linear problem for $dF_{v}dv = -F(v)$ using classic multigrid
-
-\subsection*{Full approximation scheme}
-
-The residual equation is more difficult:
-\[
-A(v + e) - A(v) = r
-\]
-
-when projected on the coarse space:
-\[
-A(P^{\top}v + e_{c}) - A(P^{\top}v) = P^{\top}r
-\]
-
-you recursively solve the non-linear problem
-
-\[
-A(u_{c}) = A(P^{\top}v) + P^{\top}r
-\]
-
-\section{algebraic multi grid}
+\section{algebraic multigrid}
 
 There is no grid: location are unknown or inexistant.
 
@@ -372,6 +333,9 @@ we choose a relaxation method. An error is algebraically smooth when it is not r
 more rigorously if the smoother satisfies the smoothing property:
 
 we have $\|r\|_{D^{-1}} \ll  \|e\|_{A}$
+
+% the D norm is there so that the results do not depend on what's in the diagonal of A, the "scale" of the problem
+% in the Laplacian case, D is cst*I so it's just the euclidien norm
 
 \begin{align*}
     \|e\|_{A}^{2} & = \langle Ae, e \rangle \\
@@ -424,14 +388,19 @@ For small eigenvalues, we get $\lambda_i(\hat{S}) \approx 1$: these components f
 we want to compare $\|r\|_{D^{-1}} $ and $\|e\|_{A} = \langle Ae,e \rangle$ when $e$ is a smooth error.
 
 \[
+\|r\|_{D^{-1}} = \|Ae\|_{D^{-1}} = \|D^{-\frac{1}{2}}Ae\|_{2} = \|\hat{A}s\|_{2} = \sum_{k}{\lambda_{k}^2c_{k}^{2}}
+\]
+using the decomposition in an eigenvector basis of $\hat{A}$
+
+interpretation: \\
+when the components along high energy modes ($\lambda_{k}$ is big) are important, the norm is huge. \\
+when the error is algebraically smooth, $r \approx 0$ and the norm is tiny. 
+
+additionally
+\[
 \langle Ae,e \rangle = \langle \hat{A}s,s \rangle = \sum_{k}{\lambda_{k}c_{k}^{2}}
 \]
-using an eigenvector basis of $\hat{A}$
 
-and
-\[
-\|r\|_{D^{-1}} = \|Ae\|_{D^{-1}} = \|D^{-\frac{1}{2}}Ae\|_{2} = \|\hat{A}s\|_{2}
-\]
 
 if the smoother is effective, only components of eigenvectors of $\hat{A}$ with small eigenvalues remain, ie:
 
@@ -439,15 +408,16 @@ if the smoother is effective, only components of eigenvectors of $\hat{A}$ with 
 \|r\|_{D^{-1}}^{2} \approx \sum_{\lambda_{k} \le \epsilon}{\lambda_{k}^{2}c_{k}^{2}} \le \epsilon \sum_{\lambda_{k} \le \epsilon}{\lambda_{k}c_{k}^{2}} \approx \epsilon \langle Ae,e \rangle
 \]
 
-ie
+which means
 
 \[
 \|r\|_{D^{-1}} \le \sqrt{\epsilon}\|e\|_{A}
 \]
 
 if the smoother is effective $\sqrt{\epsilon} \ll 1$ and we have $\|r\|_{D^{-1}} \ll  \|e\|_{A}$
+% that sqrt is bothering me
 
-\subsubsection*{Convergence analysis}
+\subsection*{Convergence analysis}
 
 Convergence of a multigrid method requires two hypothesis:
 
@@ -459,7 +429,8 @@ Convergence of a multigrid method requires two hypothesis:
 
 \begin{itemize}
     \item This implies $S$ is a contraction in the $A$-norm, and the relaxation would converge
-    \item it is a bit stronger
+    \item the negative term quantifies the drop: if the error is smooth $A e \approx 0$, and progress stalls \\
+    if the error is oscillatory, $\|r\|_{D^{-1}} = \|\hat{A}s\|_{2} = \sum_{k}{\lambda_{k}^2c_{k}^{2}}$ is huge and progress is fast
 \end{itemize}
 
 \textbf{The Approximation Property}: The coarse grid can approximate smooth errors
@@ -473,7 +444,9 @@ Convergence of a multigrid method requires two hypothesis:
     \item if $e$ is a smooth error, the interpolation needs to accurately represent it (smooth errors must be close to the $\range(P)$)
 \end{itemize}
 
-% the role of the smoother is to take care of everything not in range(P). The 2-grid operator will take care of the rest.
+% the role of the smoother is to take care of the high energy components.
+% the two grid operator has to deal with the rest, and for that the low energy modes have to be in range(P)
+% in practice this is not "verified", but enforced: range(P) explicitly targets the low energy modes
 
 \textbf{Convergence theorem}
 
@@ -504,9 +477,18 @@ for $s = TGe $ in $\range(TG)$, we have $\langle As,Ps\rangle = 0$
 \end{align*}
 
 % is TG the projection or there is the pre-smoothing too ?
-% does not change the proof
+% does not change the proof\
+
+% what about the edge case where the highest energy modes do not need to be suppressed, because they are handled by the subspace correction
+% is it because they are in range(P) ? why ?
+% it does not really make sense
 
 \subsection*{classic AMG}
+
+\subsubsection*{rational}
+\[
+    r \approx 0 \implies a_{ii}e_i \approx - \sum_{j \neq i}{a_{ij}e_j}
+\]
 
 $e_{i}$ is approximated by a weighted average of its neighbors. We focus on the biggest contribution, ie the highest $|a_{ij}|$
 
@@ -520,7 +502,25 @@ if j strongly influence i, it's a good candidate for the interpolation.
 
 just like in the geometric case, when the error is smooth, local (= strong influence) variation are small.
 
-In classic AMG, the interpolation is given by:
+\begin{align*}
+    \|e\|_A = \sum_{ij}{a_{ij}e_i e_j} & = \frac{1}{2} \sum_{ij}{-a_{ij}\left[{(e_i - e_j)}^2 - e_i^2 - e_j^2\right]} \\ 
+                                       & = \frac{1}{2} \sum_{ij}{-a_{ij}{\left(e_i - e_j\right)}^2} + \sum_{i}{\left(\sum_{i}{a_{ij}}\right)e_i^2 }
+\end{align*}
+
+for M matrices, the $a_{ij}$ are negative and $ \sum_{i}{a_{ij}} = 0$
+
+and for smooth error $\|e\|_{A} = \epsilon \|e\|_{D} = \epsilon \sum_{i}{a_{ii}e_i^2}$
+
+\[
+    \sum_{i}{a_{ii}e_i^2}\left[ \sum_{j \neq i}{\frac{|a_{ij}|}{a_{ii}} \left(\frac{e_i - e_j}{e_i}\right)}^2 - 2\epsilon \right] = 0
+\]
+
+meaning most of the time $ \frac{|a_{ij}|}{a_{ii}} {\left(\frac{e_i - e_j}{e_i}\right)}^2 $ is small \\
+when i and j are strongly connected $ \frac{|a_{ij}|}{a_{ii}} $ is large so $e_i \approx e_j $ 
+
+\subsubsection*{interpolation}
+
+The interpolation is given by:
 
 \begin{equation*}
     {(P \mathbf{e})}i = 
@@ -530,7 +530,8 @@ In classic AMG, the interpolation is given by:
     \end{cases}
 \end{equation*}
 
-Coarse grid values are directly used. The other are inferred from their strong connexion with the coarse grid.
+Coarse grid values are directly used. \\
+The other are inferred from their strong connexion with the coarse grid.
 
 Once the interpolation is build, the restriction and coarse operator are defined as:
 
@@ -549,7 +550,44 @@ This way the correction is optimal in the A-norm:
 
 by property of the $A$-orthogonal projection on $\range(P)$ $\Pi_{A}$
 
+\section{Non-linear multigrid}
 
+we want to solve
+\[
+F(u) = 0
+\]
+
+\subsection*{Newton's multigrid}
+
+from the guess v, we have:
+\[
+F(v + dv) = F(v) + dF_{v}dv + O(\|dv\|^{2})
+\]
+
+if $v + dv$ is the solution, ad we neglect the high order terms:
+\[
+dv = -dF_{v}^{-1}F(v)
+\]
+
+You can solve the linear problem for $dF_{v}dv = -F(v)$ using classic multigrid
+
+\subsection*{Full approximation scheme}
+
+The residual equation is more difficult:
+\[
+A(v + e) - A(v) = r
+\]
+
+when projected on the coarse space:
+\[
+A(P^{\top}v + e_{c}) - A(P^{\top}v) = P^{\top}r
+\]
+
+you recursively solve the non-linear problem
+
+\[
+A(u_{c}) = A(P^{\top}v) + P^{\top}r
+\]
 
 \end{document}
 
