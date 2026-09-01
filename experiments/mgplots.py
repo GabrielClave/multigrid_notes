@@ -12,14 +12,20 @@ from plotnine import (
     labs,
     scale_color_manual,
     theme,
-    theme_bw,
+    theme_minimal,
     geom_point,
     facet_wrap,
     scale_x_continuous,
-    scale_y_log10
+    scale_y_log10,
+    theme_minimal,
+    element_blank,
+    element_rect,
+    ggsave
 )
 import scipy.sparse as sp
 import scipy.sparse.linalg as spla
+
+bg_color = "#fafafa"
 
 # ==============================================================================
 # Smoother effect 
@@ -61,7 +67,7 @@ df_list = []
 signals = [
     ("1. High Freq", v_high, v_high_smooth),
     ("2. Low Freq", v_low, v_low_smooth),
-    ("3. Composite", v_comp, v_comp_smooth),
+    # ("3. Composite", v_comp, v_comp_smooth),
 ]
 
 for signal_name, initial, smoothed in signals:
@@ -102,13 +108,15 @@ plot = (
     + facet_grid("signal ~ state", scales="free_y")
     + scale_color_manual(values=["#d95f02", "#7570b3"], name="Smoother State")
     + labs(
-        title=f"Damped Jacobi Smoothing Effect (omega = {omega:.2f})",
+        title=f"Damped Jacobi Smoothing Effect",
         x="Grid coordinate x",
         y="Amplitude",
     )
-    + theme_bw()
+    + theme_minimal()
     + theme(
         figure_size=(10, 7),
+        legend_position="none",
+        plot_background=element_rect(fill=bg_color, color=bg_color),
         strip_text_x=element_text(size=10, weight="bold"),
         strip_text_y=element_text(size=10, weight="bold"),
         title=element_text(size=13, weight="bold"),
@@ -116,6 +124,8 @@ plot = (
 )
 
 plot
+
+ggsave(plot, filename="damped_jacobi.png", dpi=300, width=10, height=7)
 
 # ==============================================================================
 ###### Jacobi used as a solver
@@ -154,10 +164,10 @@ df_conv = pd.DataFrame({
 # 4. Plot Convergence Curve (Semi-log scale)
 conv_plot = (
     ggplot(df_conv, aes(x="iteration", y="rel_error_norm"))
-    + geom_line(color="#2b5c8f", size=1.0)
+    + geom_line(color="#7570b3", size=1.0)
     + geom_point(
         data=df_conv[df_conv["iteration"] % 10 == 0],
-        color="#2b5c8f",
+        color="#7570b3",
         size=2.0,
     )
     + scale_y_log10()
@@ -166,15 +176,18 @@ conv_plot = (
         x="Iteration",
         y="Relative Error Norm (log scale)",
     )
-    + theme_bw()
+    + theme_minimal()
     + theme(
         figure_size=(9, 5),
+        plot_background=element_rect(fill=bg_color, color=bg_color),
         strip_text_x=element_text(size=10, weight="bold"),
         title=element_text(size=12, weight="bold"),
     )
 )
 
 conv_plot
+
+ggsave(conv_plot, filename="jacobi_convergence.png", dpi=300, width=10, height=7)
 
 # ==============================================================================
 ###### coarse grid effect
@@ -259,16 +272,17 @@ plot_sampling = (
     # Grid points
     + geom_point(df_discrete, aes(x="x", y="y", color="grid"), size=2.0)
     + facet_wrap("~grid", ncol=1)
-    + scale_color_manual(values=["#e41a1c", "#377eb8"], guide=None)
+    + scale_color_manual(values=["#d95f02", "#7570b3"], guide=None)
     + scale_x_continuous(breaks=[0, 0.25, 0.5, 0.75, 1.0], expand=(0, 0))
     + labs(
-        title=f"Coarse Grid Sampling & Aliasing Effect (k = {k})",
+        title=f"Coarse Grid Sampling",
         x="Spatial Coordinate x",
         y="Amplitude",
     )
-    + theme_bw()
+    + theme_minimal()
     + theme(
-        figure_size=(10, 5),
+        figure_size=(10, 7),
+        plot_background=element_rect(fill=bg_color, color=bg_color),
         strip_text=element_text(size=11, weight="bold"),
         title=element_text(size=13, weight="bold"),
         panel_grid_major_x=element_text(color="#eeeeee"),
@@ -277,6 +291,8 @@ plot_sampling = (
 )
 
 plot_sampling
+
+ggsave(plot_sampling, filename="signal_sampling.png", dpi=300, width=10, height=7)
 
 
 # ==============================================================================
@@ -312,11 +328,11 @@ df_super_points = pd.concat([
     }),
 ])
 
-color_fine_line = "#cf4d4dff"  # Background wave color for fine grid (e.g., orange)
-color_coarse_line = "#6481a77b"  # Background wave color for coarse grid (e.g., purple)
+color_fine_line = "#daa67e"  # Background wave color for fine grid (e.g., orange)
+color_coarse_line = "#7570b3"  # Background wave color for coarse grid (e.g., purple)
 
-color_fine_point = "#e41a1c"  # Discrete point color for fine grid (red)
-color_coarse_point = "#377eb8"  # Discrete point color for coarse grid (blue)
+color_fine_point = "#d95f02"  # Discrete point color for fine grid (red)
+color_coarse_point = "#7570b3"  # Discrete point color for coarse grid (blue)
 
 plot_superposition_index = (
     ggplot()
@@ -327,6 +343,7 @@ plot_superposition_index = (
         aes(x="point_index", y="y"),
         color=color_fine_line,
         size=0.9,
+        alpha = 0.5
     )
     + geom_line(
         df_super_bg[
@@ -336,6 +353,7 @@ plot_superposition_index = (
         aes(x="point_index", y="y"),
         color=color_coarse_line,
         size=0.9,
+        alpha = 0.5
     )
     # Discrete grid points with their own mapped colors for the legend
     + geom_point(
@@ -352,9 +370,10 @@ plot_superposition_index = (
         x="Grid Point Index (i)",
         y="Amplitude",
     )
-    + theme_bw()
+    + theme_minimal()
     + theme(
         figure_size=(10, 5),
+        plot_background=element_rect(fill=bg_color, color=bg_color),
         title=element_text(size=13, weight="bold"),
         legend_position="bottom",
         legend_title=element_text(size=10, weight="bold"),
@@ -363,6 +382,8 @@ plot_superposition_index = (
 )
 
 plot_superposition_index
+
+ggsave(plot_superposition_index, filename="coarse_restriction.png", dpi=300, width=10, height=5)
 
 # ==============================================================================
 ###### Two-level Grid operator
@@ -380,7 +401,7 @@ from plotnine import (
     labs,
     scale_color_manual,
     theme,
-    theme_bw,
+    theme_minimal,
 )
 
 # 1. Discretization Setup (1D Poisson using dense arrays)
@@ -511,7 +532,7 @@ plot_tg = (
         x="Spatial Coordinate x",
         y="Error Amplitude",
     )
-    + theme_bw()
+    + theme_minimal()
     + theme(
         figure_size=(11, 7),
         strip_text_x=element_text(size=10, weight="bold"),

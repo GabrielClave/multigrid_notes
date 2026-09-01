@@ -28,7 +28,7 @@
 % slide Notations
 \begin{frame}{Notations}
 \subsection*{Notations}
-Let $A \in \mathbb{R}^{n \times n}$ be non-singular and $f \in \mathbb{R}^n$.
+Let $A \in \mathbb{R}^{n \times n}$ be \textbf{SPD} and $f \in \mathbb{R}^n$.
 \begin{align*}
     \text{Problem:}          \quad & Au = f \\
     \text{Error:}            \quad & e = u - v \\
@@ -54,6 +54,13 @@ $u$ is a fixed point of the operator:
 \]
 % this gives us an idea for an iteration
 With iteration matrix $S = M^{-1}N = I - M^{-1}A$:
+\[
+    v^{(k+1)} = Sv^{(k)} + M^{-1}f
+\]
+\end{frame}
+
+\begin{frame}{Relaxation Methods}
+
 \[
     v^{(k+1)} = Sv^{(k)} + M^{-1}f
 \]
@@ -89,6 +96,13 @@ If $\rho(S) < 1$, the error is forced to zero.
 
 % slide Smoother alone aren't great
 \begin{frame}{Issues and Convergence Rates}
+\begin{center}
+    \includegraphics[width=1\textwidth]{../experiments/jacobi_convergence.png}
+\end{center}
+\end{frame}
+
+
+\begin{frame}{Issues and Convergence Rates}
 \subsubsection*{Issue \& Strength}
 \[
     e^{(k+1)} = Se^{(k)} = S^{k}e^{(0)}
@@ -99,10 +113,6 @@ If $\rho(S) < 1$, the error is forced to zero.
     \item Convergence rate stagnates quickly after initial iterations.
 \end{itemize}
 
-\vspace{1em}
-\begin{center}
-    % [Insert picture: Convergence stagnation / Error norm vs iteration]
-\end{center}
 \end{frame}
 % used alone, relaxation methods are slow and expensive 
 
@@ -113,11 +123,13 @@ If $\rho(S) < 1$, the error is forced to zero.
     \item They are inefficient at eliminating \textbf{low-frequency / smooth} error components.
 \end{itemize}
 % for classic smoother, people realized it was the "oscillating" error that was effectively removed
+\end{frame}
 
-\vspace{2em}
+\begin{frame}{Smoothing Property}
 \begin{center}
-    % [Insert picture: High-frequency vs Low-frequency error smoothing]
+    \includegraphics[width=1\textwidth]{../experiments/damped_jacobi.png}
 \end{center}
+% for classic smoother, people realized it was the "oscillating" error that was effectively removed
 \end{frame}
 
 % slide coarse grid to artificially increase the frequency
@@ -126,9 +138,17 @@ If $\rho(S) < 1$, the error is forced to zero.
 
 \textbf{Core Intuition:} Subsampling a smooth signal on a coarser grid turns low-frequency modes into high-frequency modes relative to the new mesh size.
 
-\vspace{2em}
+\end{frame}
+
+\begin{frame}{Coarse Grid Concept}
 \begin{center}
-    % [Insert picture: Effect of subsampling on mode frequencies]
+    \includegraphics[width=1\textwidth]{../experiments/signal_sampling.png}
+\end{center}
+\end{frame}
+
+\begin{frame}{Coarse Grid Concept}
+\begin{center}
+    \includegraphics[width=1\textwidth]{../experiments/coarse_restriction.png}
 \end{center}
 \end{frame}
 
@@ -136,43 +156,22 @@ If $\rho(S) < 1$, the error is forced to zero.
 \begin{frame}{Multigrid Idea \& Grid Transfers}
 \textbf{Recursive Procedure:}
 \begin{enumerate}
-    \item Apply relaxation on the fine grid until the error is smooth.
-    \item Project the smooth residual/error onto a coarser grid where it becomes oscillatory.
-    \item Perform relaxation on the coarse grid.
-    \item Correct the fine grid approximation.
+    \onslide<1->{\item Relax on the fine grid.}
+    \onslide<2->{\item Project onto a coarser grid where the error becomes oscillatory.}
+    \onslide<3->{\item Relax on the coarse grid.}
+    \onslide<4->{\item Correct the fine grid approximation.}
 \end{enumerate}
 
-\vspace{1em}
-\textbf{Inter-grid Transfer Operators:}
-\begin{itemize}
-    \item \textbf{Interpolation / Prolongation ($P$):} Coarse $\to$ Fine
-    \item \textbf{Projection / Restriction ($R = P^\top$):} Fine $\to$ Coarse
-\end{itemize}
+\onslide<5->{
+    \vspace{1em}
+    \textbf{Inter-grid Transfer Operators:}
+    \begin{itemize}
+        \item \textbf{Interpolation / Prolongation ($P$):} Coarse $\to$ Fine
+        \item \textbf{Projection / Restriction ($R = P^\top$):} Fine $\to$ Coarse
+    \end{itemize}
+}
 \end{frame}
-
-% slide coarse grid
-\begin{frame}{Coarse Grid Operator Formulation}
-\subsubsection*{Coarse Grid Equations}
-On the coarse grid, we solve the residual equation:
-\[
-    A_{c}e_{c} = r_{c}
-\]
-
-\begin{itemize}
-    \item \textbf{Geometric Case:} The underlying continuous physics dictate the operator; $A_c$ is discretized directly on the coarse geometry.
-    \item \textbf{Algebraic Case (Galerkin approach):} Given prolongation $P$ and setting $e \approx Pe_{c}$:
-\end{itemize}
-\begin{align*}
-    Ae = r &\implies APe_{c} \approx r \\ 
-           &\implies P^{\top}APe_{c} = P^{\top}r
-\end{align*}
-
-Choosing $r_c = P^\top r$ yields the Galerkin coarse-grid operator:
-\[
-    A_{c} = P^{\top}AP
-\]
-\end{frame}
-
+    
 \section{Basic Multigrid}
 
 % slide general idea
@@ -188,6 +187,35 @@ Choosing $r_c = P^\top r$ yields the Galerkin coarse-grid operator:
     \end{itemize}
     \item \textbf{Coarse Grid Correction:} Correct the approximation with $v \leftarrow v + Pe_{c}$.
 \end{itemize}
+\end{frame}
+
+% slide coarse grid
+\begin{frame}{Coarse Grid Operator Formulation}
+\subsubsection*{Coarse Grid Equations}
+
+\onslide<1->{
+    On the coarse grid, we solve the residual equation:
+    \[
+        A_{c}e_{c} = r_{c}
+    \]
+}
+
+\begin{itemize}
+    \onslide<2->{\item \textbf{Geometric Case:} The underlying continuous physics dictate the operator; $A_c$ is discretized directly on the coarse geometry.}
+    % you take the grid, and assemble the matrix again
+    \onslide<3->{\item \textbf{Algebraic Case (Galerkin approach):} Given prolongation $P$ and setting $e \approx Pe_{c}$:}
+    \end{itemize}
+\onslide<3->{
+    \begin{align*}
+        Ae = r &\implies APe_{c} \approx r \\ 
+            &\implies P^{\top}APe_{c} = P^{\top}r
+    \end{align*}
+
+    Choosing $r_c = P^\top r$ yields the Galerkin coarse-grid operator:
+    \[
+        A_{c} = P^{\top}AP
+    \]
+}
 \end{frame}
 
 % slide V-cycle
@@ -208,45 +236,60 @@ Choosing $r_c = P^\top r$ yields the Galerkin coarse-grid operator:
 \end{frame}
 
 % slide multigrid operator
+\subsection{How does it work}
 \begin{frame}{Two-Grid Operator Derivation}
-\subsection*{Two-Grid Operator}
 
 \begin{align*}
-    \text{Pre-smoothing ($q$ steps):} & \quad e \leftarrow S^{q}e \\
-    \text{Compute residual:}          & \quad r = Ae \\
-    \text{Restrict residual:}         & \quad r_{c} = P^{\top}r \\
-    \text{Exact coarse solve:}        & \quad e_{c} = A_{c}^{-1}r_{c} = {(P^{\top}AP)}^{-1}r_{c} \\
-    \text{Interpolate \& Correct:}    & \quad e \leftarrow e - Pe_{c}
+    \onslide<1->{\text{Pre-smoothing ($q$ steps):} & \quad e \leftarrow S^{q}e \\}
+    \onslide<2->{\text{Compute residual:}          & \quad r = Ae \\}
+    \onslide<3->{\text{Restrict residual:}         & \quad r_{c} = P^{\top}r \\}
+    \onslide<4->{\text{Exact coarse solve:}        & \quad e_{c} = A_{c}^{-1}r_{c} = {(P^{\top}AP)}^{-1}r_{c} \\}
+    \onslide<5->{\text{Interpolate \& Correct:}    & \quad e \leftarrow e - Pe_{c}}
 \end{align*}
 
 \vspace{0.5em}
+\onslide<6->{
 Combining these steps we get:
 \[
-    e \leftarrow (I - P{(P^{\top}AP)}^{-1}P^{\top}A)S^{q}e
+    e \leftarrow \left(I - P{(P^{\top}AP)}^{-1}P^{\top}A\right)S^{q}e
 \]
-
+}
+\onslide<7->{
 The \textbf{Two-Grid Error Operator} is:
 \[
-    TG_{q} = (I - P{(P^{\top}AP)}^{-1}P^{\top}A)S^{q}
+    TG_{q} = \left(I - P{(P^{\top}AP)}^{-1}P^{\top}A\right)S^{q}
 \]
+}
 \end{frame}
 
 % slide algebraic insight
 \begin{frame}{Algebraic Insight}
 \subsection*{Algebraic Insight}
 
-\[
-    TG_{q} = (I - P{(P^{\top}AP)}^{-1}P^{\top}A)S^{q}
-\]
+\begin{align*}
+TG_{q} & = \left(I - P{(P^{\top}AP)}^{-1}P^{\top}A\right)S^{q} \\ 
+       & = \left(I - \Pi\right)S^{q}
+\end{align*}
 
-$\Pi = P{(P^{\top}AP)}^{-1}P^{\top}A$ is the $A$-orthogonal projection onto $\range(P)$.
+\onslide<2->{$\Pi = P{(P^{\top}AP)}^{-1}P^{\top}A$ is the $A$-orthogonal projection onto $\range(P)$.}
 
-\begin{itemize}
-    \item $TG_{0} = I - \Pi$ is the $A$-orthogonal projection onto $\range(P)^{\perp_A} = \nul(P^{\top}A)$.
-    \item Direct sum decomposition: $V = \range(P) \oplus_{A} \nul(P^{\top}A)$.
-    \item The coarse grid correction eliminates the error component along $\range(P)$.
-\end{itemize}
+\onslide<3->{
+    \begin{itemize}
+        \item $TG_{0} = I - \Pi$ is the $A$-orthogonal projection onto $\range{(P)}^{\perp_A} = \nul(P^{\top}A)$.
+        \item The coarse grid correction eliminates the error component along $\range(P)$.
+    \end{itemize}
+    }
+\end{frame}
 
+% slide final graph
+% \subsection*{Summary Scheme}
+\begin{frame}{Summary Scheme}
+\begin{center}
+    \only<1>{\includegraphics[trim=40 0 20 90 cm, clip, width=0.9\textwidth, keepaspectratio]{../pictures/MG Convergence.png}}%
+    \only<2>{\includegraphics[trim=40 0 20 90 cm, clip, width=0.9\textwidth, keepaspectratio]{../pictures/MG Convergence(1).png}}%
+    \only<3>{\includegraphics[trim=40 0 20 90 cm, clip, width=0.9\textwidth, keepaspectratio]{../pictures/MG Convergence(2).png}}%
+    \only<4>{\includegraphics[trim=40 0 20 90 cm, clip, width=0.9\textwidth, keepaspectratio]{../pictures/MG Convergence(3).png}}
+\end{center}
 \end{frame}
 
 \begin{frame}{Algebraic Insight}
@@ -265,186 +308,45 @@ The coarse grid correction $TG_{0} = I - \Pi$ eliminates the error component alo
 \end{itemize}
 \end{frame}
 
-% slide Spectral insight
-\begin{frame}{Spectral Insight}
-\subsection*{Spectral Insight}
+\begin{frame}{Summary: Key Takeaways}
+\subsection*{Summary}
 
-\textbf{Action of the Two-Grid Operator on Modes:}
-
+A multigrid solver relies on three core ingredients:
 \begin{itemize}
-    \item \textbf{Coarse Grid Correction alone ($TG_0$):}
-    \begin{itemize}
-        \item Suppresses smooth / low-frequency components of the error.
-        \item Leaves high-frequency components largely untouched.
-    \end{itemize}
-    
-    \vspace{0.5em}
-    % picture
-
+    \item \textbf{A Smoother ($S$)} eliminates error in a subspace $H$.
+    \item \textbf{A Coarse Grid \& Interpolation ($P$)}
+    \item \textbf{A Coarse Solver} (can recursively be another multigrid cycle).
 \end{itemize}
+
+\vspace{1em}
+\begin{block}{Fundamental Principle}
+The central objective when designing a multigrid method is to construct $P$ and $S$ such that $\range(P)$ and $H$ are \textbf{complementary}:
+\[
+    V \approx \range(P) \oplus_A H
+\]
+Ensuring that error components missed by the smoother are effectively captured and eliminated by the coarse grid correction.
+\end{block}
 \end{frame}
 
-\begin{frame}{Spectral Insight}
-\subsection*{Spectral Insight}
+\begin{frame}[plain]
+\vfill
+\centering
+\begin{beamercolorbox}[sep=8pt,center,shadow=true,rounded=true]{title}
+    \usebeamerfont{title}\Huge Thank you for your attention!\par
+\end{beamercolorbox}
 
-\textbf{Action of the Two-Grid Operator on Modes:}
+\vspace{3em}
 
+\begin{block}{References}
+\small
 \begin{itemize}
-    
-    \item \textbf{Combined Two-Grid Operator ($TG_q = TG_0 S^q$):}
-    \begin{itemize}
-        \item $S^q$ damps high frequencies.
-        \item $TG_0$ eliminates low frequencies.
-        \item Result: Uniform suppression of all error components across the spectrum.
-    \end{itemize}
+    \item \textbf{W. L. Briggs, V. E. Henson, and S. F. McCormick}, \textit{A Multigrid Tutorial}, 2nd Edition, SIAM, 2000.
+    \item \textbf{Y. Saad}, \textit{Iterative Methods for Sparse Linear Systems}, 2nd Edition, SIAM, 2003 (Chapter 13: Multigrid Methods).
 \end{itemize}
+\end{block}
+
+\vfill
+
 \end{frame}
-
-% slide final graph
-\begin{frame}{Summary Scheme}
-\subsection*{Summary Scheme}
-
-\begin{center}
-    % [Insert graph: Spectrum / Error reduction comparison]
-    % e.g., Plots showing error spectrum for S^q, TG_0, and TG_q
-\end{center}
-\end{frame}
-
-% \section{algebraic multi grid}
-
-% There is no grid: location are unknown or inexistant.
-
-% \subsection*{algebraic smooth error}
-
-% we choose a relaxation method. An error is algebraically smooth when it is not reduced by the smoother.
-
-% \begin{align*}
-%       & Se \approx  e \\ 
-%  \iff & \left(I - M^{-1}N\right)e \approx  0 \\ 
-%  \iff & \left(M - N\right)e \approx  0 \\ 
-%  \iff & Ae = r \approx  0 \\ 
-% \end{align*}
-
-% more rigorously if the smoother satisfies the smoothing property:
-
-% we have $\|r\|_{D^{-1}} \ll  \|e\|_{A}$
-
-% \begin{align*}
-%     \|e\|_{A}^{2} & = \langle Ae, e \rangle \\
-%                   & =  \langle D^{-\frac{1}{2}}Ae, D^{\frac{1}{2}}e \rangle \\
-%                   & \le \| D^{-\frac{1}{2}}Ae \|_{2} \| D^{\frac{1}{2}}e \| \\
-%                   & \le \| r \|_{D^{-1}} \| e \|_{D}
-% \end{align*}
-
-% meaning we have $ \|e\|_{A} \ll \|e\|_{D}$ or $\langle Ae,e \rangle \ll \langle De, e \rangle  $
-
-% for some smooth error $s = D^{\frac{1}{2}}e$
-
-% we have $ \langle Ae,e \rangle = s^{\top}D^{-\frac{1}{2}}AD^{-\frac{1}{2}}s $ and $\langle De, e \rangle = s^{\top}s $
-
-% meaning
-% \begin{align*}
-%       & s^{\top}\hat{A} s \ll  s^{\top}s \\ 
-%  \iff & \frac{s^{\top}\hat{A} s}{s^{\top}s} \ll 1 \\ 
-%  \iff & r_{\hat{A}}(s) \ll 1 \\ 
-% \end{align*}
-
-% with $\hat{A} = D^{-\frac{1}{2}}AD^{-\frac{1}{2}}$
-
-% the Rayleigh quotient of a smooth error is small.
-
-% This means that smooth errors are a combination of eigenvectors of $\hat{A}$ with small eigenvalues.
-
-% % but it is \hat{A} and not A and s and not e ?
-% % TODO look at: generalized eigenvalue problem
-
-% \textbf{Connection with the smoother}
-
-% \[
-% s^{(k+1)} = D^{1/2}\left(I - M^{-1}A\right)D^{-1/2}s^{(k)} = \left(I - \hat{M}^{-1}\hat{A}\right)s^{(k)} = \hat{S}s^{(k)}
-% \]
-
-% Damped Jacobi: $M = \frac{1}{\omega}D$
-% In this case, $\hat{M} = \frac{1}{\omega}I$
-
-% The smoother operator simplifies to: $\hat{S} = I - \omega \hat{A}$
-
-% The eigenvalues are $\lambda_i(\hat{S}) = 1 - \omega \lambda_i(\hat{A})$.
-
-% For large eigenvalues of $\hat{A}$, $|\lambda_i(\hat{S})| \ll 1$: the smoother is effective
-
-% For small eigenvalues, we get $\lambda_i(\hat{S}) \approx 1$: these components form the smooth error, unaffected by the iteration
-
-% \subsubsection*{Spectral insight}
-
-% we want to compare $\|r\|_{D^{-1}} $ and $\|e\|_{A} = \langle Ae,e \rangle$ when $e$ is a smooth error.
-
-% \[
-% \langle Ae,e \rangle = \langle \hat{A}s,s \rangle = \sum_{k}{\lambda_{k}c_{k}^{2}}
-% \]
-% using an eigenvector basis of $\hat{A}$
-
-% and
-% \[
-% \|r\|_{D^{-1}} = \|Ae\|_{D^{-1}} = \|D^{-\frac{1}{2}}Ae\|_{2} = \|\hat{A}s\|_{2}
-% \]
-
-% if the smoother is effective, only components of eigenvectors of $\hat{A}$ with small eigenvalues remain, ie:
-
-% \[
-% \|r\|_{D^{-1}}^{2} \approx \sum_{\lambda_{k} \le \epsilon}{\lambda_{k}^{2}c_{k}^{2}} \le \epsilon \sum_{\lambda_{k} \le \epsilon}{\lambda_{k}c_{k}^{2}} \approx \epsilon \langle Ae,e \rangle
-% \]
-
-% ie
-
-% \[
-% \|r\|_{D^{-1}} \le \sqrt{\epsilon}\|e\|_{A}
-% \]
-
-% if the smoother is effective $\sqrt{\epsilon} \ll 1$ and we have $\|r\|_{D^{-1}} \ll  \|e\|_{A}$
-
-% \subsection*{classic AMG}
-
-
-% $e_{i}$ is approximated by a weighted average of its neighbors. We focus on the biggest contribution, ie the highest $|a_{ij}|$
-
-% strong dependence:
-% \[
-% |a_{ij}| \ge \theta \max_{i \ne k}{|a_{ik}|}
-% \]
-
-% if j strongly influence i, it's a good candidate for the interpolation.
-% % look for a better geometric explanation
-
-% just like in the geometric case, when the error is smooth, local (= strong influence) variation are small.
-
-% In classic AMG, the interpolation is given by:
-
-% \begin{equation*}
-%     {(P \mathbf{e})}i = 
-%     \begin{cases}
-%         \hfill e_i & \text{if } i \in C, \\[8pt]
-%         \displaystyle \sum_{j \in C_i} \omega_{ij} e_j & \text{if } i \in F
-%     \end{cases}
-% \end{equation*}
-
-% Coarse grid values are directly used. The other are inferred from their strong connexion with the coarse grid.
-
-% Once the interpolation is build, the restriction and coarse operator are defined as:
-
-% \begin{align*}
-%       & R = P^{\top} \\ 
-%       & A_{c} = P^{\top}AP
-% \end{align*}
-
-% This way the correction is optimal in the A-norm:
-
-% \begin{align*}
-%       \|TGe\|_{A} = \|e - \Pi_{A}e\|_{A} & = \min_{w \in \range(P)}{\|e - w\|_{A}} \\ 
-%                     \|e - Pe_{c}\|_{A}   & = \min_{x \in \Omega_{c}}{\|e - Px\|_{A}}
-% \end{align*}
-
-
-% by property of the $A$-orthogonal projection on $\range(P)$ $\Pi_{A}$
 
 \end{document}

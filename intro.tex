@@ -4,8 +4,6 @@
 \usepackage{parskip}
 \usepackage{graphicx}
 
-\usepackage[french]{babel}
-
 \usepackage{XCharter}
 \usepackage[charter]{mathdesign}
 
@@ -21,9 +19,11 @@
 \author{Gabriel Clave}
 \maketitle
 
+\tableofcontents
+
 \section{Relaxation methods}
 
-\subsection*{Notations}
+\subsection{Notations}
 
 \begin{align*}
     \text{Problem:}          \quad & Au = f \\
@@ -32,7 +32,7 @@
     \text{Residual Problem:} \quad & Ae = r
 \end{align*}
 
-\subsection*{Relaxation Methods}
+\subsection{Matrix splitting}
 
 Decompose $A$ into $M - N$, where $M$ is easy to invert.
 
@@ -85,7 +85,7 @@ the iterate can also be expressed as:
 \end{itemize}
 
 \subsubsection*{Issue \& strength}
-Very slow convergence rate: good at the beginning, then stagnates.
+Very slow convergence rate: good at the beginning, then stagnates. \\ 
 Able to remove high-frequency/oscillatory error, but can't deal with low frequency/smooth one.
 
 % diagram with high mode and low mode before/after smoother
@@ -157,7 +157,7 @@ In the algebraic case, assuming the interpolation
 
 \section{Basic multigrid}
 
-\subsection*{general idea}
+\subsection{general idea}
 
 \begin{itemize}
     \item Relax on $Au = f$ on the fine grid to obtain an approximation $v$.
@@ -168,7 +168,7 @@ In the algebraic case, assuming the interpolation
     \item Correct the approximation with the error estimate $v \leftarrow v + Pe_{c}$.
 \end{itemize}
 
-\subsection*{V-cycle}
+\subsection{V-cycle}
 
 \begin{itemize}
     \item Relax on $Au = f$ on the fine grid to obtain an approximation $v$.
@@ -179,14 +179,14 @@ In the algebraic case, assuming the interpolation
     \item Correct the approximation with the error estimate $v \leftarrow v + Pe_{c}$.
 \end{itemize}
 
-\subsection*{Full multigrid cycle}
+\subsection{Full multigrid cycle}
 A good choice of initial guess can speed up V-cycle convergence.
 
 To get one we run a V-cycle on each level before starting the first one on the finest grid.
 
 \section{Elements of convergence}
 
-\subsection*{Notations}
+\subsection{Notations}
 
 \begin{align*}
     \text{Discretization error:}       \quad & E^{h}_{i} = u(x_{i}) - u^{h}_{i} \\
@@ -201,7 +201,7 @@ We can show that
 \|E^{h}_{i}\| \le Kh^{p}
 \]
 
-\subsection*{V-cycle}
+\subsection{V-cycle}
 
 We want the multigrid cycle to reduce $e^{h}$ down to $ O(h^{p})$, for a sufficiently low $h$.
 
@@ -212,7 +212,7 @@ We need k cycles, with $\gamma^{k} = O(n^{-p})$ ie $k = O(\log(n))$
 
 The cost per V-cycle is $O(n^{d})$ giving a total cost of $ O(N\log(N))$
 
-\subsection*{FMG}
+\subsection{FMG}
 
 The idea is to show that a constant number (independent of n and h) of FMG cycle is enough to reduce the error to the desired magnitude.
 
@@ -247,7 +247,7 @@ we are left with an $O(1)$ factor to eliminate, which requires $O(1)$ cycles
 
 The cost per FMG-cycle is $O(n^{d})$ giving a total cost of $ O(N)$
 
-\subsection*{Spectral insight}
+\subsection{Spectral insight}
 
 the restriction from a grid of $2p + 1$ points to a grid of $p$ points is an operator with full rank $p$, and null $p+1$
 
@@ -289,7 +289,7 @@ $TG_{0}$ suppresses the smooth components of the error.
 $TG_{q}$ suppresses the error.
 % final graph
     
-\subsection*{algebraic insight}
+\subsection{algebraic insight}
 
 $\Pi = P{(P^{\top}AP)}^{-1}P^{\top}A$ is the $A$-orthogonal projection on $\range{(P)}$
 
@@ -313,13 +313,13 @@ The effect of the (ideal) relaxation is to remove the high frequency components.
 
 The efficiency of multigrid relies on the near alignement of the low frequency space and the range of interpolation
 
-\includegraphics{pictures/Convergence4.png}
+\includegraphics{pictures/Convergence.png}
 
 \section{algebraic multigrid}
 
 There is no grid: location are unknown or inexistant.
 
-\subsection*{algebraic smooth error}
+\subsection{algebraic smooth error}
 
 we choose a relaxation method. An error is algebraically smooth when it is not reduced by the smoother.
 
@@ -330,8 +330,7 @@ we choose a relaxation method. An error is algebraically smooth when it is not r
  \iff & Ae = r \approx  0 \\ 
 \end{align*}
 
-more rigorously if the smoother satisfies the smoothing property:
-
+more rigorously if the smoother satisfies the smoothing property, \\ 
 we have $\|r\|_{D^{-1}} \ll  \|e\|_{A}$
 
 % the D norm is there so that the results do not depend on what's in the diagonal of A, the "scale" of the problem
@@ -417,7 +416,7 @@ which means
 if the smoother is effective $\sqrt{\epsilon} \ll 1$ and we have $\|r\|_{D^{-1}} \ll  \|e\|_{A}$
 % that sqrt is bothering me
 
-\subsection*{Convergence analysis}
+\subsection{Convergence analysis}
 
 Convergence of a multigrid method requires two hypothesis:
 
@@ -438,10 +437,11 @@ Convergence of a multigrid method requires two hypothesis:
 \[
 \min_{u_c} \|e - P u_c\|_D^2 \le \beta \|e\|_{A}^2
 \]
+% the distance between the error and range(P)
 
 \begin{itemize}
     \item if the error is oscillatory, $\|e\|_{A}$ is huge, and the inequality is easily satisfied, regardless of the quality of the interpolation
-    \item if $e$ is a smooth error, the interpolation needs to accurately represent it (smooth errors must be close to the $\range(P)$)
+    \item if $e$ is a smooth error, the interpolation needs to accurately represent it: smooth errors must be near $\range(P)$
 \end{itemize}
 
 % the role of the smoother is to take care of the high energy components.
@@ -452,7 +452,7 @@ Convergence of a multigrid method requires two hypothesis:
 
 if $\alpha \le \beta$ the iteration converges, with $\| STG \|_A \le \sqrt{1 - \frac{\alpha}{\beta}}$
 
-proof:
+\textbf{proof}:
 
 by the smoothing property,
 \[
@@ -483,14 +483,15 @@ for $s = TGe $ in $\range(TG)$, we have $\langle As,Ps\rangle = 0$
 % is it because they are in range(P) ? why ?
 % it does not really make sense
 
-\subsection*{classic AMG}
+\subsection{classic AMG}
 
 \subsubsection*{rational}
 \[
     r \approx 0 \implies a_{ii}e_i \approx - \sum_{j \neq i}{a_{ij}e_j}
 \]
 
-$e_{i}$ is approximated by a weighted average of its neighbors. We focus on the biggest contribution, ie the highest $|a_{ij}|$
+$e_{i}$ is approximated by a weighted average of its neighbors. \\ 
+We focus on the biggest contribution, ie the highest $|a_{ij}|$
 
 strong dependence:
 \[
@@ -498,9 +499,6 @@ strong dependence:
 \]
 
 if j strongly influence i, it's a good candidate for the interpolation.
-% look for a better geometric explanation
-
-just like in the geometric case, when the error is smooth, local (= strong influence) variation are small.
 
 \begin{align*}
     \|e\|_A = \sum_{ij}{a_{ij}e_i e_j} & = \frac{1}{2} \sum_{ij}{-a_{ij}\left[{(e_i - e_j)}^2 - e_i^2 - e_j^2\right]} \\ 
@@ -516,7 +514,9 @@ and for smooth error $\|e\|_{A} = \epsilon \|e\|_{D} = \epsilon \sum_{i}{a_{ii}e
 \]
 
 meaning most of the time $ \frac{|a_{ij}|}{a_{ii}} {\left(\frac{e_i - e_j}{e_i}\right)}^2 $ is small \\
-when i and j are strongly connected $ \frac{|a_{ij}|}{a_{ii}} $ is large so $e_i \approx e_j $ 
+when i and j are strongly connected $ \frac{|a_{ij}|}{a_{ii}} $ is large so $e_i \approx e_j $
+
+just like in the geometric case, when the error is smooth, local (= strong influence) variation are small.
 
 \subsubsection*{interpolation}
 
@@ -557,7 +557,7 @@ we want to solve
 F(u) = 0
 \]
 
-\subsection*{Newton's multigrid}
+\subsection{Newton's multigrid}
 
 from the guess v, we have:
 \[
@@ -571,7 +571,7 @@ dv = -dF_{v}^{-1}F(v)
 
 You can solve the linear problem for $dF_{v}dv = -F(v)$ using classic multigrid
 
-\subsection*{Full approximation scheme}
+\subsection{Full approximation scheme}
 
 The residual equation is more difficult:
 \[
@@ -590,6 +590,5 @@ A(u_{c}) = A(P^{\top}v) + P^{\top}r
 \]
 
 \end{document}
-
-
+ 
 % diagnosis: how does the restriction acts on high/low freq nodes ?
