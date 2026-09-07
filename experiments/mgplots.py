@@ -170,7 +170,6 @@ conv_plot = (
         color="#7570b3",
         size=2.0,
     )
-    + scale_y_log10()
     + labs(
         title=f"Jacobi Solver Convergence",
         x="Iteration",
@@ -183,6 +182,7 @@ conv_plot = (
         strip_text_x=element_text(size=10, weight="bold"),
         title=element_text(size=12, weight="bold"),
     )
+    + scale_y_log10()
 )
 
 conv_plot

@@ -64,7 +64,7 @@ With iteration matrix $S = M^{-1}N = I - M^{-1}A$:
 \[
     v^{(k+1)} = Sv^{(k)} + M^{-1}f
 \]
-
+% with some manipulation we see there is a simple linear relation between the error iterates
 Using $M^{-1}f = u - Su$, the error evolution satisfies:
 \[
     e^{(k+1)} = Se^{(k)} = S^{k}e^{(0)}
@@ -93,6 +93,7 @@ If $\rho(S) < 1$, the error is forced to zero.
     Solve for $v_{i}^{(k+1)}$ using already computed values at step $k+1$.
 \end{itemize}
 \end{frame}
+% So we have a method to solve a linear system. The problem is that it doesn't work super well
 
 % slide Smoother alone aren't great
 \begin{frame}{Issues and Convergence Rates}
@@ -100,7 +101,7 @@ If $\rho(S) < 1$, the error is forced to zero.
     \includegraphics[width=1\textwidth]{../experiments/jacobi_convergence.png}
 \end{center}
 \end{frame}
-
+% great progress at the beginning, then stagnates
 
 \begin{frame}{Issues and Convergence Rates}
 \subsubsection*{Issue \& Strength}
@@ -109,20 +110,21 @@ If $\rho(S) < 1$, the error is forced to zero.
 \]
 
 \begin{itemize}
-    \item Error components along eigenvectors corresponding to large eigenvalues of $S$ decay very slowly.
+    \item Error components along eigenvectors corresponding to large eigenvalues of $S$ (close to 1) decay very slowly.
     \item Convergence rate stagnates quickly after initial iterations.
 \end{itemize}
 
 \end{frame}
-% used alone, relaxation methods are slow and expensive 
+% used alone, relaxation methods are slow and expensive
+% for classic smoother, people realized it was the "oscillating" error that was effectively removed
 
-% slide their strength lies in their ability to remove "high frequency error"
 \begin{frame}{Smoothing Property}
 \begin{itemize}
     \item Relaxation methods are effective at damping \textbf{high-frequency / oscillatory} components of the error.
     \item They are inefficient at eliminating \textbf{low-frequency / smooth} error components.
 \end{itemize}
-% for classic smoother, people realized it was the "oscillating" error that was effectively removed
+% their strength lies in their ability to remove "high frequency error"
+
 \end{frame}
 
 \begin{frame}{Smoothing Property}
@@ -194,24 +196,24 @@ If $\rho(S) < 1$, the error is forced to zero.
 \subsubsection*{Coarse Grid Equations}
 
 \onslide<1->{
+    On the fine grid, we solve the residual equation:
+    \[
+        Ae = r
+    \]
     On the coarse grid, we solve the residual equation:
     \[
         A_{c}e_{c} = r_{c}
-    \]
-}
-
+    \]}
 \begin{itemize}
     \onslide<2->{\item \textbf{Geometric Case:} The underlying continuous physics dictate the operator; $A_c$ is discretized directly on the coarse geometry.}
     % you take the grid, and assemble the matrix again
-    \onslide<3->{\item \textbf{Algebraic Case (Galerkin approach):} Given prolongation $P$ and setting $e \approx Pe_{c}$:}
+    \onslide<3->{\item \textbf{Algebraic Case (Galerkin approach):}}
     \end{itemize}
 \onslide<3->{
     \begin{align*}
-        Ae = r &\implies APe_{c} \approx r \\ 
+        Ae = r &\implies APe_{c} = r \\ 
             &\implies P^{\top}APe_{c} = P^{\top}r
     \end{align*}
-
-    Choosing $r_c = P^\top r$ yields the Galerkin coarse-grid operator:
     \[
         A_{c} = P^{\top}AP
     \]
@@ -231,7 +233,7 @@ If $\rho(S) < 1$, the error is forced to zero.
         \item apply the same procedure down to the coarsest level.
     \end{itemize}
     \item \textbf{Coarse Grid Correction:} Correct the approximation on the fine grid: $v \leftarrow v + Pe_{c}$.
-    \item \textbf{Post-smoothing:} (Optional) Apply additional relaxation steps on $Au = f$.
+    \item \textbf{Post-smoothing:} Apply additional relaxation steps on $Au = f$.
 \end{itemize}
 \end{frame}
 
@@ -240,24 +242,23 @@ If $\rho(S) < 1$, the error is forced to zero.
 \begin{frame}{Two-Grid Operator Derivation}
 
 \begin{align*}
-    \onslide<1->{\text{Pre-smoothing ($q$ steps):} & \quad e \leftarrow S^{q}e \\}
-    \onslide<2->{\text{Compute residual:}          & \quad r = Ae \\}
-    \onslide<3->{\text{Restrict residual:}         & \quad r_{c} = P^{\top}r \\}
-    \onslide<4->{\text{Exact coarse solve:}        & \quad e_{c} = A_{c}^{-1}r_{c} = {(P^{\top}AP)}^{-1}r_{c} \\}
-    \onslide<5->{\text{Interpolate \& Correct:}    & \quad e \leftarrow e - Pe_{c}}
+    \onslide<1->{\text{Compute residual:}          & \quad r = Ae \\}
+    \onslide<2->{\text{Restrict residual:}         & \quad r_{c} = P^{\top}r \\}
+    \onslide<3->{\text{Exact coarse solve:}        & \quad e_{c} = A_{c}^{-1}r_{c} = {(P^{\top}AP)}^{-1}r_{c} \\}
+    \onslide<4->{\text{Interpolate \& Correct:}    & \quad e \leftarrow e - Pe_{c}}
 \end{align*}
 
 \vspace{0.5em}
-\onslide<6->{
+\onslide<5->{
 Combining these steps we get:
 \[
-    e \leftarrow \left(I - P{(P^{\top}AP)}^{-1}P^{\top}A\right)S^{q}e
+    e \leftarrow \left(I - P{(P^{\top}AP)}^{-1}P^{\top}A\right)e
 \]
 }
-\onslide<7->{
+\onslide<6->{
 The \textbf{Two-Grid Error Operator} is:
 \[
-    TG_{q} = \left(I - P{(P^{\top}AP)}^{-1}P^{\top}A\right)S^{q}
+    TG = \left(I - P{(P^{\top}AP)}^{-1}P^{\top}A\right)
 \]
 }
 \end{frame}
@@ -267,15 +268,15 @@ The \textbf{Two-Grid Error Operator} is:
 \subsection*{Algebraic Insight}
 
 \begin{align*}
-TG_{q} & = \left(I - P{(P^{\top}AP)}^{-1}P^{\top}A\right)S^{q} \\ 
-       & = \left(I - \Pi\right)S^{q}
+TG & = \left(I - P{(P^{\top}AP)}^{-1}P^{\top}A\right) \\ 
+       & = I - \Pi
 \end{align*}
 
 \onslide<2->{$\Pi = P{(P^{\top}AP)}^{-1}P^{\top}A$ is the $A$-orthogonal projection onto $\range(P)$.}
 
 \onslide<3->{
     \begin{itemize}
-        \item $TG_{0} = I - \Pi$ is the $A$-orthogonal projection onto $\range{(P)}^{\perp_A} = \nul(P^{\top}A)$.
+        \item $TG = I - \Pi$ is the $A$-orthogonal projection onto $\range{(P)}^{\perp_A} = \nul(P^{\top}A)$.
         \item The coarse grid correction eliminates the error component along $\range(P)$.
     \end{itemize}
     }
@@ -292,21 +293,21 @@ TG_{q} & = \left(I - P{(P^{\top}AP)}^{-1}P^{\top}A\right)S^{q} \\
 \end{center}
 \end{frame}
 
-\begin{frame}{Algebraic Insight}
+% \begin{frame}{Algebraic Insight}
 
-The coarse grid correction $TG_{0} = I - \Pi$ eliminates the error component along $\range(P)$.
+% The coarse grid correction $TG_{0} = I - \Pi$ eliminates the error component along $\range(P)$.
 
-\vspace{0.5em}
-\textbf{Complementary Mechanism:}
-\begin{itemize}
-    \item Decomposition into Fourier modes: $V = L \oplus H$ (low and high frequencies).
-    \item Relaxation $S^q$ eliminates high-frequency components ($H$).
-    \item Efficiency relies on the near-alignment of low frequencies and range of prolongation:
-    \[
-        L \approx \range(P)
-    \]
-\end{itemize}
-\end{frame}
+% \vspace{0.5em}
+% \textbf{Complementary Mechanism:}
+% \begin{itemize}
+%     \item Decomposition into Fourier modes: $V = L \oplus H$ (low and high frequencies).
+%     \item Relaxation $S^q$ eliminates high-frequency components ($H$).
+%     \item Efficiency relies on the near-alignment of low frequencies and range of prolongation:
+%     \[
+%         L \approx \range(P)
+%     \]
+% \end{itemize}
+% \end{frame}
 
 \begin{frame}{Summary: Key Takeaways}
 \subsection*{Summary}
