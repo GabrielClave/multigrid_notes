@@ -1,0 +1,43 @@
+\documentclass{article}
+\usepackage[utf8]{inputenc}
+\usepackage{amsmath, amsthm}
+\usepackage{parskip}
+\usepackage{graphicx}
+
+\usepackage{XCharter}
+\usepackage[charter]{mathdesign}
+
+\usepackage{amsmath}
+
+\DeclareMathOperator{\range}{range}
+\DeclareMathOperator{\nul}{null}
+\DeclareMathOperator{\im}{im}
+
+\begin{document}
+\title{Abstract Multigrid notes}
+\author{Gabriel Clave}
+\maketitle
+
+\tableofcontents
+
+\section{variational Formulation}
+
+we consider the problem
+\[
+    Ax = b
+\]
+with $ A: V \rightarrow V'$, $x \in \mathbb{R}^n$ and $b \in (\mathbb{R}^n)'$
+
+x and b do not live in the same vector spaces:
+
+$x$ is in $V \cong \mathbb{R}^n$, and represent a primal state (temperature, pressure), and the natural norm is the energy norm $\|x\|^2 = x^{\top}Ax$
+
+$b$ is in $V' \cong (\mathbb{R}^n)'$, and represent a source (force, flux), and the natural norm is the dual norm $\|b\|^2 = b^{\top}A^{-1}b$
+
+% in particular x^Tb does not really make sense
+
+It is this problem that arise naturally from the weak formulation.
+
+and the matrix assembled is ...
+\end{document}
+
