@@ -39,5 +39,28 @@ $b$ is in $V' \cong (\mathbb{R}^n)'$, and represent a source (force, flux), and 
 It is this problem that arise naturally from the weak formulation.
 
 and the matrix assembled is ...
+
+we solve
+\[
+    \text{Find } u \in V \text{ such that } \langle A u, v \rangle = \langle f, v \rangle \quad \forall v \in V
+\]
+% noting that Au is in V', so \langle A u, v \rangle is the real number (Au)(v)
+
+The idea is to approximate the solution in the range of $P$, which means finding a $u_c \in V_c$, such that $u \approx Pu_c$
+
+We are doing a Galerkin projection on $range(P) \in V$: 
+$$\text{Find } u_P \in range(P) \text{ such that } \langle A P u_P, v_P \rangle = \langle f, v_P \rangle \quad \forall v_P \in range(P)$$
+
+If we define $e_{approx} = u-u_P$, we can note that $\langle Ae_{approx}, v_P \rangle = 0$ for all $v_P$, ie the approximation error is orthogonal to $range(P)$
+
+we then have
+\begin{align*}
+    \langle Ae, v_P \rangle = 0 \\
+    \langle Au - Au_P, v_P \rangle = 0 \\
+    \langle Au_P, v_P \rangle = \langle f, v_P \rangle \\
+    \langle APu_c, Pv_c \rangle = \langle f, Pv_c \rangle \\
+    \langle P'APu_c, v_c \rangle = \langle P'f, v_c \rangle \\
+\end{align*}
+
 \end{document}
 
