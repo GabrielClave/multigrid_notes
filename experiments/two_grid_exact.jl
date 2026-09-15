@@ -1,10 +1,11 @@
 using LinearAlgebra
 using Random
 using DataFrames
+using TidierPlots
 using AlgebraOfGraphics
 using CairoMakie
 
-Random.seed!(42)
+Random.seed!(1111)
 
 n = 20
 k = 10
@@ -17,9 +18,8 @@ d = sign.(diag(F.R))
 d[d .== 0] .= 1.0
 Q = F.Q * Diagonal(d)
 
-# 2. Generate SPD matrix A with spectrum log-spaced from 10^-6 to 10^3
-# (Using log-spacing ensures an even distribution of orders of magnitude)
-λ = range(100, 0.1, length=n)
+# 2. Generate SPD matrix A with spectrum spaced from 10 to 1
+λ = range(10, 1, length=n)
 D = Diagonal(λ)
 A = Q * D * Q'
 
@@ -50,9 +50,9 @@ A_c = P' * A * P
 E_c = I - P * (A_c \ (P' * A))
 
 # 6. Setup problem: Au = f
-f = ones(n)
+f = range(10, 0, length=n)
 u = A \ f
-v0 = randn(n)
+v0 = zeros(n)
 
 e0 = u - v0
 r0 = f - A * v0
@@ -91,31 +91,32 @@ e2 = E_c * E_s * e0        # After full 2-grid cycle
 # VISUALIZATION 1: Eigenbasis Component Bar Plots
 # ==============================================================================
 
-# Transform errors into the eigenbasis Q
 e0_hat = Q' * e0
 e1_hat = Q' * e1
 e_cgc_hat = Q' * e_cgc_only
 
-df_components = DataFrame(
-    Index = repeat(1:n, 3),
-    Component = vcat(e0_hat, e1_hat, e_cgc_hat),
-    Stage = vcat(
-        fill("1. Initial (e0)", n),
-        fill("2. After Smoother (e1)", n),
-        fill("3. After CGC alone", n)
-    )
+# 1. Custom palette: map each Stage string to a specific color
+stage_colors = ["#2b5c8f", "#d95f02", "#7570b3"]
+
+plt1 = data(df_components) * 
+       mapping(
+           :Index => "Eigenvector Index (1:k = High, k+1:n = Low)", 
+           :Component => "|e_hat|", 
+           color = :Stage => sorter(["Initial", "After Smoother", "After CGC"]),
+           layout = :Stage => sorter(["Initial", "After Smoother", "After CGC"])
+       ) * 
+       visual(BarPlot)
+
+# 2. Force 1 column layout, pass custom palette, and hide the legend
+fg1 = draw(
+    plt1; 
+    facet = (number_cols = 1,),
+    palettes = (color = stage_colors,),
+    legend = (enabled = false,),
+    axis = (height = 160, width = 600)
 )
 
-plot_components = ggplot(df_components, aes(x = :Index, y = :Component, fill = :Stage)) +
-    geom_col(position = "dodge") +
-    geom_vline(xintercept = k + 0.5, linetype = "dashed") +
-    labs(
-        title = "Error Spectrum Decomposed in Eigenbasis Q",
-        x = "Eigenvector Index (1:k = High Freq, k+1:n = Low Freq)",
-        y = "Component Value"
-    )
-
-display(plot_components)
+display(fg1)
 
 # ==============================================================================
 # VISUALIZATION 2: 2D Subspace Norm Projection Space
@@ -123,9 +124,7 @@ display(plot_components)
 
 function get_subspace_coords(e, Q, k)
     e_hat = Q' * e
-    norm_H = norm(e_hat[1:k])
-    norm_L = norm(e_hat[k+1:end])
-    return norm_H, norm_L
+    return norm(e_hat[1:k]), norm(e_hat[k+1:end])
 end
 
 x0, y0 = get_subspace_coords(e0, Q, k)
@@ -136,18 +135,29 @@ x2, y2 = get_subspace_coords(e2, Q, k)
 df_2d = DataFrame(
     x = [x0, x1, xc, x2],
     y = [y0, y1, yc, y2],
-    Label = ["e0 (Initial)", "e1 (After Smoother)", "e_cgc (After CGC)", "e2 (Full Cycle)"]
+    Stage = ["e0 (Initial)", "e1 (After Smoother)", "e_cgc (After CGC)", "e2 (Full Cycle)"]
 )
 
-plot_subspace = ggplot(df_2d, aes(x = :x, y = :y, color = :Label)) +
-    geom_point(size = 4) +
-    geom_segment(aes(x = x0, y = y0, xend = x1, yend = y1), color = "gray", linetype = "dotted") +
-    geom_segment(aes(x = x0, y = y0, xend = xc, yend = yc), color = "gray", linetype = "dotted") +
-    geom_segment(aes(x = x1, y = y1, xend = x2, yend = y2), color = "gray", linetype = "dotted") +
-    labs(
-        title = "Error Trajectory in High vs Low Frequency Norm Space",
-        x = "High-Frequency Subspace Norm ||P_H e||",
-        y = "Low-Frequency Subspace Norm ||P_L e||"
-    )
+# Trajectory connecting segments (e0 -> e1 -> e2 and e0 -> e_cgc)
+df_lines = DataFrame(
+    x = [x0, x1, x0],
+    y = [y0, y1, y0],
+    xend = [x1, x2, xc],
+    yend = [y1, y2, yc]
+)
 
-display(plot_subspace)
+plt2_points = data(df_2d) * 
+              mapping(
+                  :x => "High-Frequency Norm ||P_H e||", 
+                  :y => "Low-Frequency Norm ||P_L e||", 
+                  color = :Stage
+              ) * 
+              visual(Scatter, markersize=16)
+
+plt2_lines = data(df_lines) * 
+             mapping(:x, :y, :xend, :yend) * 
+             visual(Linesegments, linestyle=:dot, color=:gray50, linewidth=2)
+
+fig2 = draw(plt2_lines + plt2_points; axis=(title="Error Trajectory in High vs Low Subspace Norm Space",))
+
+display(fig2)
