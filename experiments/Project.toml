@@ -1,0 +1,5 @@
+[deps]
+AlgebraOfGraphics = "cbdf2221-f076-402e-a563-3d30da359d67"
+DataFrames = "a93c6f00-e57d-5684-b7b6-d8193f3e46c0"
+LanguageServer = "2b0e0bc5-e4fd-59b4-8912-456d1b03d8d7"
+TidierPlots = "337ecbd1-5042-4e2a-ae6f-ca776f97570a"
