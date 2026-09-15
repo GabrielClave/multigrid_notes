@@ -1,3 +1,13 @@
 {
-    "julia.environmentPath": "/home/gclave/Documents/code/latex/multigrid_notes/experiments"
+    "julia.environmentPath": "/home/gclave/Documents/code/latex/multigrid_notes/experiments",
+    "cSpell.words": [
+        "eigenbasis",
+        "ggplot",
+        "linetype",
+        "Makie",
+        "vline",
+        "xend",
+        "xintercept",
+        "yend"
+    ]
 }

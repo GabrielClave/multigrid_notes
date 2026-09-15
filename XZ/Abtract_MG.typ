@@ -18,7 +18,9 @@
 // Custom Math Operators
 #let range = math.op("range")
 #let nul = math.op("null")
-#let im = math.op("im")
+#let im = math.op("Im")
+#let ker = math.op("ker")
+#let Ri = $overline(R)^(-1)$
 
 // Document Title & Metadata
 #align(center)[
@@ -58,33 +60,71 @@ $ "Find " u in V " such that " chevron.l A u, v chevron.r = chevron.l f, v chevr
 
 == Smoother
 
-Let $ R : V' arrow.r.long V$ be a valid smoother
-// valid ? + role
+=== general linear iteration
+
+The first component of a multigrid solver is a smoother.\
+It is a linear operator $B : V' arrow.r.long V$ that can be used to solve (equation) through the linear iteration:
+$
+  v^((k+1)) = v^((k)) + B(f - A v^((k)))
+$
+with associated error propagation operator
+$
+  E = I - B A
+$
+If $B$ is not symmetric, it can be symmetrized through the iteration:
+
+with
+$
+  overline(E) = I - overline(B) A
+$
+
+=== a two-grid smoother
+
+Let $ R : V' arrow.r.long V$ be a valid smoother. \
+If $e in ker(A)$, then $E e = (I - R A)e = e$: nothing happens.\
+The smoother alone is unable to reduce the composant of the error that are in ker(A)
+
+similarly, if $e_lambda in E_lambda (A)$, then $E e_lambda = (I - lambda R)e_lambda$\
+for a given $R$ with bounded norm,  $E e_lambda arrow.r.long_(lambda arrow.r 0) e_lambda $
+
+It will be difficult for the smoother to remove composant of the error in directions associated with the smallest eigenvalues of $A$.
+
+The role of R is to act as an approximate inverse of A, but not on the entire spectrum.\
+The application of the smoother will damp error composants in the directions associated with the highest eigenvalues of $A$.\
+We will call this vector space $H$, the space of high frequency error.\
+The error not in $H$ will need to be addressed separately.
+
+==== smoother geometry
+
+$Ri$ is invertible by design and symmetric: it defines a scalar product on $V$ $(dot,dot)_(Ri).$
 
 Let $overline(T) = overline(R)A$
 
-We have $nul(A) subset nul(overline(T))$
+We have $ker(A) subset ker(overline(T))$
 
-noting that $overline(T)$ acts as a bridge between the $A$ geometry and the $overline(R)^(-1)$ geometry
+$overline(T)$ acts as a bridge between the $A$ geometry and the $Ri$ geometry
 $ 
-  (u,v)_A = (overline(R) A u, v)_(overline(R)^(-1)) = (overline(T) u,v)_(overline(R)^(-1))
+  (u,v)_A = (overline(R) A u, v)_(Ri) = (overline(T) u,v)_(Ri)
 $
 
 we also have:
 
 $
-  x in nul(overline(T)) & arrow.r.double ||overline(T)x||_(overline(R)^(-1)) = 0 \
+  x in ker(overline(T)) & arrow.r.double ||overline(T)x||_(Ri) = 0 \
                          & arrow.r.double ||x||_A = 0 \
-                         & arrow.r.double x in nul(A)
+                         & arrow.r.double x in ker(A)
 $
 
-which means $nul(A) = nul(overline(T))$ and so $range(overline(T)) = W$
+which means $ker(A) = ker(overline(T))$ and so $range(overline(T)) = W$
+// W is not defined yet
 
 == Coarse space correction
 
 
-The idea is to use a coarse space $V_c$, linked with V by the injective operator $P: V_c -> V$ \
-We will then look to approximate the solution in the range of $P$, which means finding a $u_P in range(P)$, such that $u approx u_P = P u_c, quad u_c in V_c$.
+In order to deal with the error composant unaffected by the smoother, the idea is to use a coarse space $V_c$, linked with V by the injective operator $P: V_c -> V$
+
+We will then look to approximate the solution of (equation) in the range of $P$, which means finding a $u_P in range(P)$, such that $u approx u_P = P u_c, quad u_c in V_c$.
+// need smoother link: Galerkin projection allows to remove composant in range(P)
 
 We are doing a Galerkin projection: instead of solving the variational problem on the entire space V, we restrict the search space to $range(P) in V$:
 
@@ -100,6 +140,8 @@ Noting $A_c = P' A P$ and $f_c = P'f$, we are solving the equivalent system on $
 $ A_c u_c = f_c $
 
 If we define $e_("approx") = u - u_P$, we can note that $chevron.l A e_("approx"), v_P chevron.r = 0$ for all $v_P in range(P)$, i.e., the approximation error is orthogonal to $range(P)$.
+
+// a word on solving the coarse problem, and designing an AMG method
 
 = Convergence Theory
 
@@ -123,7 +165,7 @@ $
   range(P) = W_P xor_A N = P(V_c)
 $
 
-$P$ is injective from $V_c$ to $range(P)$, so it is decomposed into
+$P$ is injective from $V_c$ to $range(P)$, so $V_c$ can be decomposed into
 $
   V_c = W_c xor_A N_c
 $
@@ -142,21 +184,22 @@ and we will note that when $w in W_P = range(P) inter W$, we have $Pi_c (w) = Pi
 
 #v(1cm)
 
-We define the following $overline(R)^(-1)$-orthogonal projections:
+We define the following $Ri$-orthogonal projections:
 
 $
  Q_c: V &arrow.r.long range(P)\
  Q_W: V &arrow.r.long W
 $
 #v(1cm)
-=== Operator
+=== Two-Grids Operator
 
-A two-grid correction operator is an operator $B : V' arrow.r.long V$ composed of the two steps:
+A two-grid correction operator is an operator $B : V' arrow.r.long V$ that acts on $f in V'$ with the two steps:
 - apply the subspace correction
-- apply the smoother
-
 $
-  w &= P A_c^(-1)P' f\ // f or r ?
+  w &= P A_c^(-1)P' f // f or r ?
+$
+- apply the smoother
+$
   B f &= w + R(f - A w)
 $
 
@@ -168,8 +211,8 @@ $ ||E||_A^2 = 1 - 1 / (K (V_c)) $
 
 with
 $
-  K (V_c) = max_(w in W) (|| (I - Q_c)v||_(overline(R)^(-1))^2 ) / ( ||v||_A^2) =
-  max_(w in W) min_(v_P in range(P)) (|| w - v_P||_(overline(R)^(-1))^2 ) / ( ||v||_A^2)
+  K (V_c) = max_(w in W) (|| (I - Q_c)v||_(Ri)^2 ) / ( ||v||_A^2) =
+  max_(w in W) min_(v_P in range(P)) (|| w - v_P||_(Ri)^2 ) / ( ||v||_A^2)
 $
 #v(1cm)
 === Proof
@@ -187,7 +230,7 @@ $
   &= 1 - lambda_(min)(X),
 $
 
-where $ X = (I - Pi_c) Q_W overline(R) A : W_P^(perp_A) arrow.r.long W_P^(perp_A) $
+where $ X = (I - Pi_c) Q_W overline(R) A quad : quad W_P^(perp_A) arrow.r.long W_P^(perp_A) $
 
 #v(1cm)
 
@@ -211,9 +254,52 @@ $ forall w in W, v in W_P^(perp_A), quad(w,v)_A = ((I-Pi_c)w,v)_A $
 
 #v(1cm)
 
-X is self-adjoint with respect to $(dot, dot)_A$.
+==== X
 
-One key observation is that the inverse of $X$ on $W_P^(perp_A)$ can be explicitly written as:
 $
-  Z = (Q_W overline(R) A)^(-1) (I - Q_c)
+  X = (I - Pi_c) overline(T) quad : quad W_P^(perp_A) arrow.r.long W_P^(perp_A)
 $
+
+X is self-adjoint with respect to $(dot, dot)_A$, as $I-Pi_c$ is an $A$-orthogonal projection and $overline(R)$ is SPD.\
+The $Q_W$ projection is redudant here as in our setting $im(overline(T)) = W$
+
+X represents the effect of the (symmetrized) smoother on the non-smooth errors.
+
+Let $H = range(P)^(perp_A)$ be the space of these high frequency errors.\
+We have $H = W_P^(perp_A) inter W$, and the effect of the two-grids cycle on $e in H$ is:
+$
+  overline(E)|_H &= (I - overline(T))( I - Pi_c ) \
+                 &= I - overline(T) quad (I - Pi_c = I "on" H)\
+$
+
+the composant along H are given by:
+$
+  (I- Pi_c)overline(E)|_H &= I - (I- Pi_c)overline(T) \
+                          &= I - X
+$
+
+if $X approx I "on" H$, the smoother is effective and the error is almost entirely annihilated: \
+$lambda_"min"(X) approx 1$ and $||E||_A^2 = 1 - lambda_"min"(X) approx 0$
+
+if X has a small eigenvalue, the associated direction in H will escape both the effect of the smoother and the coarse space correction: converge will stagnate.
+
+==== Z
+
+The inverse of $X$ on $W_P^(perp_A)$ can be explicitly written as:
+$
+  Z = (overline(T))^(-1) (I - Q_c) quad : quad W_P^(perp_A) arrow.r.long W_P^(perp_A) 
+$
+
+using $(u,v)_A = (overline(T) u,v)_(Ri)$ we have indeed, $forall u in W, forall v_P in W_P$:
+
+$
+  (Z u, v)_A &= ( (I - Q_c) u, v )_(Ri) = 0
+$
+meaning $im(Z) subset W_P^(perp_A)$, and we have// don't we need the equality here ?
+
+$
+  X Z = (I - Pi_c)(I - Q_c) = I "on" W_P^(perp_A)
+$
+
+$ "so" lambda_min (X) = 1 / (lambda_max (Z)) $
+
