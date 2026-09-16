@@ -301,5 +301,23 @@ $
   X Z = (I - Pi_c)(I - Q_c) = I "on" W_P^(perp_A)
 $
 
-$ "so" lambda_min (X) = 1 / (lambda_max (Z)) $
+$"so" lambda_min (X) = 1 / (lambda_max (Z)) $
 
+$
+  lambda_max (Z)= max_(v in W_P^(perp_A)) r_Z (v) =  max_(v in W_P^(perp_A))( (overline(T)^(-1)(I - Q_c)v, v)_A ) / (v,v)_A
+$
+$
+  (overline(T)^(-1)(I - Q_c)v, v)_A &= (overline(T) overline(T)^(-1)(I - Q_c)v, v)_Ri \
+                                    &= ||(I - Q_c)v||_Ri^2 
+$
+$
+  lambda_max (Z) = max_(v in W_P^(perp_A)) (||(I - Q_c)v||_Ri^2) / (||v||_A^2 )
+$
+
+which is also the maximum for $w in W, quad w = v + v_P$, $v in W_P^(perp_A) "and" v_P in W_P$
+$
+  r_Z (w) = (||(I - Q_c)(v + v_P)||_Ri^2) / (||v||_A^2 + ||v_P||_A^2) lt.eq (||(I - Q_c)v||_Ri^2) / (||v||_A^2)
+$
+$ "so " lambda_max (Z)= max_(w in W) r_Z (w) = max_(v in W_P^(perp_A)) r_Z (v) = K(V_c) $
+
+$ ||E||_A^2 = 1 - 1 / (K (V_c)) $
