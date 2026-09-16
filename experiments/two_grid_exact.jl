@@ -1,32 +1,33 @@
 using LinearAlgebra
 using Random
 using DataFrames
-using TidierPlots
-using AlgebraOfGraphics
-using CairoMakie
+using CSV
 
 Random.seed!(1111)
+
+# ==============================================================================
+# "ideal" smoother
+# ==============================================================================
 
 n = 20
 k = 10
 
-# 1. Generate a random orthogonal matrix Q
+# Generate a random orthogonal matrix Q
 M = randn(n, n)
 F = qr(M)
-# Normalize signs of R's diagonal to ensure strict uniform Haar distribution
+# Normalize signs of R's diagonal to ensure strict uniform Haar distribution (whatever pleases you)
 d = sign.(diag(F.R))
 d[d .== 0] .= 1.0
 Q = F.Q * Diagonal(d)
 
-# 2. Generate SPD matrix A with spectrum spaced from 10 to 1
+# Generate SPD matrix A with spectrum spaced from 10 to 1
 λ = range(10, 1, length=n)
 D = Diagonal(λ)
 A = Q * D * Q'
 
-# Ensure exact symmetry numerically (mitigates float precision noise)
 A = Symmetric(A)
 
-# 3. Generate injective P such that range(P) = range(Q[:, k+1:n])
+# Generate injective P such that range(P) = range(Q[:, k+1:n])
 dim_subspace = n - k
 
 # Non-orthogonal invertible matrix B
@@ -37,8 +38,8 @@ P = Q[:, k+1:n] * C
 λ_B = zeros(n)
 λ_B[1:k] = 1 ./ λ[1:k]
 
-# B = Q * Diagonal(λ_B) * Q'
 B = Q * Diagonal(λ_B) * Q'
+# ideal smoother: perfectly invert A on the first k eigenvectors
 
 # Smoother error propagation matrix
 E_s = I - B * A
@@ -82,44 +83,42 @@ println("CGC error residual norm vs theoretical: ", norm(e2 - E_c * e1)) # e-11:
 println("Residual norm after 1 full 2-grid cycle ||f - Av2||: ", norm(f - A * v2)) #e-12
 println("Error norm after 1 full 2-grid cycle ||e2||: ", norm(e2)) #e-12
 
-# States
-e1 = E_s * e0              # After Smoother
 e_cgc_only = E_c * e0      # After CGC alone
-e2 = E_c * E_s * e0        # After full 2-grid cycle
 
 # ==============================================================================
-# VISUALIZATION 1: Eigenbasis Component Bar Plots
+# DATASET 1: Vector Components (Euclidean vs Eigenbasis)
 # ==============================================================================
 
+# Calculate basis components
 e0_hat = Q' * e0
 e1_hat = Q' * e1
-e_cgc_hat = Q' * e_cgc_only
+e2_hat = Q' * e2
 
-# 1. Custom palette: map each Stage string to a specific color
-stage_colors = ["#2b5c8f", "#d95f02", "#7570b3"]
-
-plt1 = data(df_components) * 
-       mapping(
-           :Index => "Eigenvector Index (1:k = High, k+1:n = Low)", 
-           :Component => "|e_hat|", 
-           color = :Stage => sorter(["Initial", "After Smoother", "After CGC"]),
-           layout = :Stage => sorter(["Initial", "After Smoother", "After CGC"])
-       ) * 
-       visual(BarPlot)
-
-# 2. Force 1 column layout, pass custom palette, and hide the legend
-fg1 = draw(
-    plt1; 
-    facet = (number_cols = 1,),
-    palettes = (color = stage_colors,),
-    legend = (enabled = false,),
-    axis = (height = 160, width = 600)
+# total series: 3 stages x 2 bases
+df_components = DataFrame(
+    Index = repeat(1:n, 6),
+    Component = vcat(
+        # Euclidean basis
+        e0, e1, e2,
+        # Eigenvector basis Q
+        e0_hat, e1_hat, e2_hat
+    ),
+    Stage = vcat(
+        fill("1. Initial (e0)", n),
+        fill("2. After Smoother (e1)", n),
+        fill("3. After CGC (e2)", n),
+        fill("1. Initial (e0)", n),
+        fill("2. After Smoother (e1)", n),
+        fill("3. After CGC (e2)", n)
+    ),
+    Basis = vcat(
+        fill("Euclidean", 3 * n),
+        fill("Eigenvector", 3 * n)
+    )
 )
 
-display(fg1)
-
 # ==============================================================================
-# VISUALIZATION 2: 2D Subspace Norm Projection Space
+# DATASET 2: 2D Subspace Norms & Trajectories
 # ==============================================================================
 
 function get_subspace_coords(e, Q, k)
@@ -138,7 +137,6 @@ df_2d = DataFrame(
     Stage = ["e0 (Initial)", "e1 (After Smoother)", "e_cgc (After CGC)", "e2 (Full Cycle)"]
 )
 
-# Trajectory connecting segments (e0 -> e1 -> e2 and e0 -> e_cgc)
 df_lines = DataFrame(
     x = [x0, x1, x0],
     y = [y0, y1, y0],
@@ -146,18 +144,10 @@ df_lines = DataFrame(
     yend = [y1, y2, yc]
 )
 
-plt2_points = data(df_2d) * 
-              mapping(
-                  :x => "High-Frequency Norm ||P_H e||", 
-                  :y => "Low-Frequency Norm ||P_L e||", 
-                  color = :Stage
-              ) * 
-              visual(Scatter, markersize=16)
+# ==============================================================================
+# EXPORT TO CSV
+# ==============================================================================
 
-plt2_lines = data(df_lines) * 
-             mapping(:x, :y, :xend, :yend) * 
-             visual(Linesegments, linestyle=:dot, color=:gray50, linewidth=2)
-
-fig2 = draw(plt2_lines + plt2_points; axis=(title="Error Trajectory in High vs Low Subspace Norm Space",))
-
-display(fig2)
+CSV.write("experiments/data/df_components.csv", df_components)
+CSV.write("experiments/data/df_2d.csv", df_2d)
+CSV.write("experiments/data/df_lines.csv", df_lines)
