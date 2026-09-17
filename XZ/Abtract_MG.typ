@@ -120,7 +120,6 @@ which means $ker(A) = ker(overline(T))$ and so $range(overline(T)) = W$
 
 == Coarse space correction
 
-
 In order to deal with the error composant unaffected by the smoother, the idea is to use a coarse space $V_c$, linked with V by the injective operator $P: V_c -> V$
 
 We will then look to approximate the solution of (equation) in the range of $P$, which means finding a $u_P in range(P)$, such that $u approx u_P = P u_c, quad u_c in V_c$.
@@ -261,7 +260,7 @@ $
 $
 
 X is self-adjoint with respect to $(dot, dot)_A$, as $I-Pi_c$ is an $A$-orthogonal projection and $overline(R)$ is SPD.\
-The $Q_W$ projection is redudant here as in our setting $im(overline(T)) = W$
+The $Q_W$ projection is redundant here as in our setting $im(overline(T)) = W$
 
 X represents the effect of the (symmetrized) smoother on the non-smooth errors.
 
@@ -303,21 +302,62 @@ $
 
 $"so" lambda_min (X) = 1 / (lambda_max (Z)) $
 
+interpretation of $Z$:\
+after you apply the smoother the remaining smooth error should be as close as possible to $range(P)$\
+the distance is $ d_Ri (e,range(P)) = min_(e_P in range(P)) ||e - e_P||_Ri = ||(I - Q_c)v||^2_Ri$
+
+$Z$ allows to express this distance in the $A$-geometry:
 $
-  lambda_max (Z)= max_(v in W_P^(perp_A)) r_Z (v) =  max_(v in W_P^(perp_A))( (overline(T)^(-1)(I - Q_c)v, v)_A ) / (v,v)_A
-$
-$
-  (overline(T)^(-1)(I - Q_c)v, v)_A &= (overline(T) overline(T)^(-1)(I - Q_c)v, v)_Ri \
+  (Z v, v)_A = (overline(T)^(-1)(I - Q_c)v, v)_A &= (overline(T) overline(T)^(-1)(I - Q_c)v, v)_Ri \
                                     &= ||(I - Q_c)v||_Ri^2 
 $
+and so in the worst case scenario we have:
 $
-  lambda_max (Z) = max_(v in W_P^(perp_A)) (||(I - Q_c)v||_Ri^2) / (||v||_A^2 )
+  lambda_max (Z) &= max_(v in W_P^(perp_A)) r_Z (v) =  max_(v in W_P^(perp_A))( (Z v, v)_A ) / (v,v)_A\
+
+                 &= max_(v in W_P^(perp_A)) (||(I - Q_c)v||_Ri^2) / (||v||_A^2 )
 $
 
-which is also the maximum for $w in W, quad w = v + v_P$, $v in W_P^(perp_A) "and" v_P in W_P$
+which is also the maximum for $w in W,"decomposed into" w = v + v_P$, $v in W_P^(perp_A) "and" v_P in W_P$
 $
   r_Z (w) = (||(I - Q_c)(v + v_P)||_Ri^2) / (||v||_A^2 + ||v_P||_A^2) lt.eq (||(I - Q_c)v||_Ri^2) / (||v||_A^2)
 $
 $ "so " lambda_max (Z)= max_(w in W) r_Z (w) = max_(v in W_P^(perp_A)) r_Z (v) = K(V_c) $
 
 $ ||E||_A^2 = 1 - 1 / (K (V_c)) $
+
+which can be understood as follow: the effectiveness of a two-grids methods depends on 
+how well the coarse space can approximate the smooth error (quantified by $Z$) that escaped the smoother (quantified by $X$)
+
+=== Optimal Coarse Space
+
+We want to chose the optimal coarse space $V_c$ so that $range(V_c)$ is the best complement to the space of high frequency errors H.
+
+This is achieved when $K(V_c)$ is minimal.
+$
+  1 / (K(V_c)) = min_(w in W) max_(w_P in W_P) (||w||_A^2)/(||w - w_P||_Ri^2)
+$
+If we take the minimum over the space of high frequency error $H^Ri = (W_P^(perp_Ri) inter W) subset W$,\ for which $min_(w in H^Ri) ||w - w_P||_Ri^2 = ||w||_Ri^2 $ // dessin ?
+$
+  1 / (K(V_c)) &lt.eq min_(w in H^Ri) max_(w_P in W_P) (||w||_A^2)/(||w - w_P||_Ri^2) \
+  &= min_(w in H^Ri)(||w||_A^2)/(||w||_Ri^2) \
+  &= min_(w in H^Ri)(||overline(R)A w||_Ri^2)/(||w||_Ri^2) \
+  &= min_(w in H^Ri) r_(overline(R)A) (w)
+$
+
+and so
+$
+  max_(dim V_c = n_c) 1 / (K(V_c)) &= max_(dim V_c = n_c) quad min_(w in H^Ri) quad r_(overline(R)A) (w)\
+  &= max_(dim H^Ri = n - (n_c + 1) + 1) quad min_(w in H^Ri) quad r_(overline(R)A) (w)\
+  &= mu_(n_c + 1)
+$
+by the max-min theorem (Courant-Fisher), with ${mu_j , q_j}$ the eigenpairs of $overline(R)A$ in increasing order.
+
+The optimal two-grids convergence is then $||E||_A = 1 - mu_(n_c + 1)$\
+which is achieved by choosing $V_c$ so that $range(P) = "vect"{q_1, ..., q_n_c}$, \ ie $H^Ri = "vect"{q_(n_c + 1), ..., q_n}$ since:
+$
+  min_(w in "vect"{q_(n_c + 1), ..., q_n})(||overline(R)A w||_Ri^2)/(||w||_Ri^2) = mu_(n_c + 1)
+$
+
+which can be obtained by setting $V_c = RR^(n_c)$ and $P = (q_1, q_2, ..., q_n)$
+// un exemple pour rigoler ?
