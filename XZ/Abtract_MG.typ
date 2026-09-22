@@ -172,95 +172,96 @@ $
 $
 with $W_c = P^(-1)(W_P)$ and $N_c = P^(-1)(N)$
 
-#cetz.canvas({
-  import cetz.draw: *
+#align(center)[
+  #cetz.canvas({
+    import cetz.draw: *
 
-  let x0 = 0.0
-  let xN = 4.0
-  let xP = xN + 2
-  let xend = 12.0
+    let x0 = 0.0
+    let xN = 4.0
+    let xP = xN + 2
+    let xend = 12.0
 
-  let y0 = 0.0
-  let yend = 2.0
-  let margin = 0.25
+    let y0 = 0.0
+    let yend = 2.0
+    let margin = 0.25
 
-  // Custom palette
-  let main-purple = rgb("#7570b3")
-  let light-purple = rgb("#c1bfda").transparentize(65%)
-  let red-accent  = rgb("#e04040")
-  let gray-bg     = rgb("#f0f0f0")
+    // Custom palette
+    let main-purple = rgb("#7570b3")
+    let light-purple = rgb("#c1bfda").transparentize(65%)
+    let red-accent  = rgb("#e04040")
+    let gray-bg     = rgb("#f0f0f0")
 
-  let brace-margin = 6.5*margin
+    let brace-margin = 6.5*margin
 
-  set-style(
-    content: (padding: 0.1),
-    text: (size: 20pt)
-  )
+    set-style(
+      content: (padding: 0.1),
+      text: (size: 20pt)
+    )
 
-  // Subspace W_P = Range(P) \cap W
-  rect((xN, y0), (xP, yend), fill: light-purple, stroke: 1pt)
-  content(((xN + xP) / 2, (y0 + yend) / 2), $W_P$)
+    // Subspace W_P = Range(P) \cap W
+    rect((xN, y0), (xP, yend), fill: light-purple, stroke: 1pt)
+    content(((xN + xP) / 2, (y0 + yend) / 2), $W_P$)
 
-  // Entire space V
-  rect((x0, y0), (xend, yend), stroke: 1pt, name: "V_rect")
+    // Entire space V
+    rect((x0, y0), (xend, yend), stroke: 1pt, name: "V_rect")
 
-  // Subspace N = Ker(A)
-  rect((x0, y0), (xN, yend), fill: gray-bg, stroke: 1pt)
-  content(((x0 + xN) / 2, (y0 + yend) / 2), $N = "Ker"(A)$)
+    // Subspace N = Ker(A)
+    rect((x0, y0), (xN, yend), fill: gray-bg, stroke: 1pt)
+    content(((x0 + xN) / 2, (y0 + yend) / 2), $N = "Ker"(A)$)
 
-  // Complementary space H^A
-  content(((xP + xend) / 2, (y0 + yend) / 2), $H^A = "range"(P)^(perp_A)$)
+    // Complementary space H^A
+    content(((xP + xend) / 2, (y0 + yend) / 2), $H^A = "range"(P)^(perp_A)$)
 
-  // Outer dashed box for Range(P)
-  rect(
-    (x0 - margin, y0 - margin),
-    (xP, yend + margin),
-    stroke: (dash: "dashed", paint: red-accent, thickness: 1pt),
-    name: "rangeP"
-  )
+    // Outer dashed box for Range(P)
+    rect(
+      (x0 - margin, y0 - margin),
+      (xP, yend + margin),
+      stroke: (dash: "dashed", paint: red-accent, thickness: 1pt),
+      name: "rangeP"
+    )
 
-  // Label for Range(P) anchored north-east above the box
-  content(
-    (rel: (0, margin), to: "rangeP.north-east"),
-    [#text(fill: red-accent, $"range"(P)$)],
-    anchor: "south-east"
-  )
+    // Label for Range(P) anchored north-east above the box
+    content(
+      (rel: (0, margin), to: "rangeP.north-east"),
+      [#text(fill: red-accent, $"range"(P)$)],
+      anchor: "south-east"
+    )
 
-  // Double-headed arrow / edge-line for W = N^\perp_A below the main drawing
-  let yW = y0 - (2 * margin)
+    // Double-headed arrow / edge-line for W = N^\perp_A below the main drawing
+    let yW = y0 - (2 * margin)
 
-  line(
-    (xN, yW),
-    (xend, yW),
-    mark: (start: "bar", end: "bar"),
-    stroke: 0.8pt,
-    name: "lineW"
-  )
+    line(
+      (xN, yW),
+      (xend, yW),
+      mark: (start: "bar", end: "bar"),
+      stroke: 0.8pt,
+      name: "lineW"
+    )
 
-  // Label for W centered underneath the line
-  content(
-    (rel: (0, -margin), to: "lineW.mid"),
-    [#text($W = N^(perp_A)$)],
-    anchor: "north"
-  )
+    // Label for W centered underneath the line
+    content(
+      (rel: (0, -margin), to: "lineW.mid"),
+      [#text($W = N^(perp_A)$)],
+      anchor: "north"
+    )
 
-  // low freq brace
-  cetz.decorations.brace((xP - 0.25*margin, y0 - brace-margin), (x0, y0 - brace-margin), name: "b_low")
-  content(
-    (rel: (0, -margin), to: "b_low.center"),
-    [#text("low frequency error")],
-    anchor: "north"
-  )
+    // low freq brace
+    cetz.decorations.brace((xP - 0.25*margin, y0 - brace-margin), (x0, y0 - brace-margin), name: "b_low")
+    content(
+      (rel: (0, -margin), to: "b_low.center"),
+      [#text("low frequency error")],
+      anchor: "north"
+    )
 
-  // high freq brace
-  cetz.decorations.brace((xend, y0 - brace-margin), (xP + 0.25*margin, y0 - brace-margin), name: "b_low")
-  content(
-    (rel: (0, -margin), to: "b_low.center"),
-    [#text("High frequency error")],
-    anchor: "north"
-  )
-})
-
+    // high freq brace
+    cetz.decorations.brace((xend, y0 - brace-margin), (xP + 0.25*margin, y0 - brace-margin), name: "b_low")
+    content(
+      (rel: (0, -margin), to: "b_low.center"),
+      [#text("High frequency error")],
+      anchor: "north"
+    )
+  })
+]
 #v(1cm)
 
 We define the following $A$-orthogonal projections:
@@ -531,11 +532,14 @@ the distance is $ d_Ri (e,range(P)) = min_(e_P in range(P)) ||e - e_P||_Ri = ||(
     let red-accent  = rgb("#e04040")
     let blue-accent = rgb("#386cb0")
 
+    let vp = 4.2
+    let vh = 3.2
+
     // Coordinates
     let orig = (0, 0)
-    let v-pt = (4.2, 3.2)            // Vector v in V
-    let Qc-v = (4.2, 0)             // Projection Q_c v on range(P)
-    let IQc-v = (0, 3.2)            // Projection (I - Q_c) v on W_P^\perp_A
+    let v-pt = (vp, vh)            // Vector v in V
+    let Qc-v = (vp, 0)             // Projection Q_c v on range(P)
+    let IQc-v = (0, vh)            // Projection (I - Q_c) v on W_P^\perp_A
 
     // Axes
     line((-0.5, 0), (5.5, 0), stroke: 1pt, name: "x-axis")
@@ -566,14 +570,14 @@ the distance is $ d_Ri (e,range(P)) = min_(e_P in range(P)) ||e - e_P||_Ri = ||(
 
     // --- DISTANCE ANNOTATION (Double-edged arrow along y-axis) ---
     line(
-      (-0.15, 0.1), (-0.15, 3.1),
+      (vp + 0.15, 0.1), (vp + 0.15, 3.1),
       mark: (start: "triangle", end: "triangle", fill: red-accent),
       stroke: (paint: red-accent, thickness: 0.6pt),
       name: "distance"
     )
 
     content(
-      (rel: (-1.5, 0), to: "distance"),
+      (rel: (1.5, 0), to: "distance"),
       text(size: 10pt)[
         $d_Ri (v, text(range)(P)) \ = ||(I - Q_c)v||_Ri$
       ],
