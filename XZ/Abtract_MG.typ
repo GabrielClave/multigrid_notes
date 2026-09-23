@@ -23,6 +23,8 @@
 #let im = math.op("Im")
 #let ker = math.op("ker")
 #let Ri = $overline(R)^(-1)$
+#let Rb = $overline(R)$
+#let Tb = $overline(T)$
 
 // Document Title & Metadata
 #align(center)[
@@ -65,60 +67,77 @@ $ "Find " u in V " such that " chevron.l A u, v chevron.r = chevron.l f, v chevr
 === general linear iteration
 
 The first component of a multigrid solver is a smoother.\
-It is a linear operator $B : V' arrow.r.long V$ that can be used to solve (equation) through the linear iteration:
+It is a linear operator $R : V' arrow.r.long V$ that can be used to solve (equation) through the linear iteration:
 $
-  v^((k+1)) = v^((k)) + B(f - A v^((k)))
+  v^((k+1)) = v^((k)) + R(f - A v^((k)))
 $
 with associated error propagation operator
 $
-  E = I - B A
-$
-// If $B$ is not symmetric, it can be symmetrized through the iteration:
-
-with
-$
-  overline(E) = I - overline(B) A \
-  overline(B) = B + B' - B' A B
+  S = I - R A
 $
 
-=== a two-grid smoother
+If $R$ is not symmetric, it can be symmetrized through the iteration:
+$
+cases(
+  u^(m - 1/2) &= u^(m - 1) + R(f - A u^(m - 1)),
+  u^m &= u^(m - 1/2) + R'(f - A u^(m - 1/2))
+)
+$
+
+which consist of applying $R$ first followed by $R'$, and is equivalent to applying $Rb$, where 
+$ Rb = R' + R - R' A R, $
+
+which satisfies
+$ I - Rb A = (I - R A)^*(I - R A). \
+(R A)^* = R' A
+$
+
+with associated
+$
+  overline(S) = I - Rb A \
+$
+
+The symmetrized iteration converges if $rho(overline(S)) <1$,\
+which implies $||S||_A = sqrt(rho(overline(S))) <1$ and so regular iteration is also convergent.
+
+=== A multigrid smoother
 
 Let $ R : V' arrow.r.long V$ be a valid smoother. \
-If $e in ker(A)$, then $E e = (I - R A)e = e$: nothing happens.\
+If $e in ker(A)$, then $S e = (I - R A)e = e$: nothing happens.\
 The smoother alone is unable to reduce the composant of the error that are in ker(A)
 
-similarly, if $e_lambda in E_lambda (A)$, then $E e_lambda = (I - lambda R)e_lambda$\
-for a given $R$ with bounded norm,  $E e_lambda arrow.r.long_(lambda arrow.r 0) e_lambda $
+similarly, if $e_lambda in E_lambda (A)$, then $S e_lambda = (I - lambda R)e_lambda$\
+for a given $R$ with bounded norm,  $S e_lambda arrow.r.long_(lambda arrow.r 0) e_lambda $
 
 It will be difficult for the smoother to remove composant of the error in directions associated with the smallest eigenvalues of $A$.
 
 The role of R is to act as an approximate inverse of A, but not on the entire spectrum.\
 The application of the smoother will damp error composants in the directions associated with the highest eigenvalues of $A$.\
-We will call this vector space $H$, the space of high frequency error.\
-The error not in $H$ will need to be addressed separately.
+We will call this vector space $H^A$, the space of high frequency error.\
+The error not in $H^A$ will need to be addressed separately.
 
 ==== smoother geometry
 
 $Ri$ is invertible by design and symmetric: it defines a scalar product on $V$ $(dot,dot)_(Ri).$
 
-Let $overline(T) = overline(R)A$
+Let $Tb = Rb A$
 
-We have $ker(A) subset ker(overline(T))$
+We have $ker(A) subset ker(Tb)$
 
-$overline(T)$ acts as a bridge between the $A$ geometry and the $Ri$ geometry
+$Tb$ acts as a bridge between the $A$ geometry and the $Ri$ geometry
 $ 
-  (u,v)_A = (overline(R) A u, v)_(Ri) = (overline(T) u,v)_(Ri)
+  (u,v)_A = (Rb A u, v)_(Ri) = (Tb u,v)_(Ri)
 $
 
 we also have:
 
 $
-  x in ker(overline(T)) & arrow.r.double ||overline(T)x||_(Ri) = 0 \
+  x in ker(Tb) & arrow.r.double ||Tb x||_(Ri) = 0 \
                          & arrow.r.double ||x||_A = 0 \
                          & arrow.r.double x in ker(A)
 $
 
-which means $ker(A) = ker(overline(T))$ and so $range(overline(T)) = W$
+which means $ker(A) = ker(Tb)$ and so $range(Tb) = W$
 // W is not defined yet
 
 == Coarse space correction
@@ -308,39 +327,39 @@ $
 #v(1cm)
 === Proof
 
-We notice that $||(I - R A) v||_A^2 = ((I - overline(R) A) v, v)_A$ for all $v in V$.
+We notice that $||(I - R A) v||_A^2 = ((I - Rb A) v, v)_A$ for all $v in V$.
 
 Then we have:
 $
   ||E||_A^2 &= max_(w in W) (||(I - R A)(I - Pi_c) w||_A^2) / (||w||_A^2) \
-  &= max_(w in W) (((I - overline(R) A)(I - Pi_c) w, (I - Pi_c) w)_A) / (||w||_A^2) \
-  &= 1 - min_(w in W) ((overline(R) A (I - Pi_c) w, (I - Pi_c) w)_A) / (||w||_A^2) \
-  &= 1 - min_(w in W) ((Q_W overline(R) A (I - Pi_c) w, (I - Pi_c) w)_A) / (||(I - Pi_c) w||_A^2 + ||Pi_c w||_A^2) \
-  &= 1 - min_(v in W_P^(perp_A)) ((Q_W overline(R) A v, v)_A) / (||v||_A^2) \
-  &= 1 - min_(v in W_P^(perp_A)) (((I - Pi_c) Q_W overline(R) A v, v)_A) / (||v||_A^2) \
+  &= max_(w in W) (((I - Rb A)(I - Pi_c) w, (I - Pi_c) w)_A) / (||w||_A^2) \
+  &= 1 - min_(w in W) ((Rb A (I - Pi_c) w, (I - Pi_c) w)_A) / (||w||_A^2) \
+  &= 1 - min_(w in W) ((Q_W Rb A (I - Pi_c) w, (I - Pi_c) w)_A) / (||(I - Pi_c) w||_A^2 + ||Pi_c w||_A^2) \
+  &= 1 - min_(v in W_P^(perp_A)) ((Q_W Rb A v, v)_A) / (||v||_A^2) \
+  &= 1 - min_(v in W_P^(perp_A)) (((I - Pi_c) Q_W Rb A v, v)_A) / (||v||_A^2) \
   &= 1 - lambda_(min)(X),
 $
 
-where $ X = (I - Pi_c) Q_W overline(R) A quad : quad W_P^(perp_A) arrow.r.long W_P^(perp_A) $
+where $ X = (I - Pi_c) Q_W Rb A quad : quad W_P^(perp_A) arrow.r.long W_P^(perp_A) $
 
 #v(1cm)
 
 additional details:
 
 $
-  ((overline(R) A (I - Pi_c) w, (I - Pi_c) w)_A) / (||w||_A^2) = ((Q_W overline(R) A (I - Pi_c) w, (I - Pi_c) w)_A) / (||(I - Pi_c) w||_A^2 + ||Pi_c w||_A^2)
+  ((Rb A (I - Pi_c) w, (I - Pi_c) w)_A) / (||w||_A^2) = ((Q_W Rb A (I - Pi_c) w, (I - Pi_c) w)_A) / (||(I - Pi_c) w||_A^2 + ||Pi_c w||_A^2)
 $
 
-$overline(R) A (I - Pi_c) w in range(overline(T)) = W$ so it is unchanged by $Q_W$ \
+$Rb A (I - Pi_c) w in range(Tb) = W$ so it is unchanged by $Q_W$ \
 $||w||_A^2 = ||(I - Pi_c) w||_A^2 + ||Pi_c w||_A^2$ using the orthogonal decomposition of W
 
 #v(1cm)
 
 $
-  (Q_W overline(R) A v, v)_A = ((I-Pi_c)Q_W overline(R) A v, v)_A
+  (Q_W Rb A v, v)_A = ((I-Pi_c)Q_W Rb A v, v)_A
 $
 
-$Q_W overline(R) A v in W$, so it is composed of some part along $W_P$ that will vanish when applying the scalar product with $v in W_P^perp_A$: \
+$Q_W Rb A v in W$, so it is composed of some part along $W_P$ that will vanish when applying the scalar product with $v in W_P^perp_A$: \
 $ forall w in W, v in W_P^(perp_A), quad(w,v)_A = ((I-Pi_c)w,v)_A $
 
 #align(center)[
@@ -409,31 +428,31 @@ $ forall w in W, v in W_P^(perp_A), quad(w,v)_A = ((I-Pi_c)w,v)_A $
 
 #v(1cm)
 
-==== X
+==== The operator X
 
 $
-  X = (I - Pi_c) overline(T) quad : quad W_P^(perp_A) arrow.r.long W_P^(perp_A)
+  X = (I - Pi_c) Tb quad : quad W_P^(perp_A) arrow.r.long W_P^(perp_A)
 $
 
-X is self-adjoint with respect to $(dot, dot)_A$, as $I-Pi_c$ is an $A$-orthogonal projection and $overline(R)$ is SPD.\
-The $Q_W$ projection is redundant here as in our setting $im(overline(T)) = W$
+X is self-adjoint with respect to $(dot, dot)_A$, as $I-Pi_c$ is an $A$-orthogonal projection and $Rb$ is SPD.\
+The $Q_W$ projection is redundant here as in our setting $im(Tb) = W$
 
 X represents the effect of the (symmetrized) smoother on the non-smooth errors.
 
 Let $H^A = range(P)^(perp_A)$ be the space of these high frequency errors.\
 We have $H^A = W_P^(perp_A) inter W$, and the effect of the two-grids cycle on $e in H$ is:
 $
-  overline(E)|_(H^A) &= (I - overline(T))( I - Pi_c ) \
-                 &= I - overline(T) quad (I - Pi_c = I "on" H)\
+  overline(E)|_(H^A) &= (I - Tb)( I - Pi_c ) \
+                 &= I - Tb quad (I - Pi_c = I "on" H)\
 $
 
 the composant along H are given by:
 $
-  (I- Pi_c)overline(E)|_(H^A) &= I - (I- Pi_c)overline(T) \
+  (I- Pi_c)overline(E)|_(H^A) &= I - (I- Pi_c)Tb \
                           &= I - X
 $
 
-if $X approx I "on" (H^A)$, the smoother is effective and the error is almost entirely annihilated: \
+if $X approx I "on" H^A$, the smoother is effective and the error is almost entirely annihilated: \
 $lambda_"min"(X) approx 1$ and $||E||_A^2 = 1 - lambda_"min"(X) approx 0$
 
 if X has a small eigenvalue, the associated direction in H will escape both the effect of the smoother and the coarse space correction: converge will stagnate.
@@ -482,7 +501,7 @@ if X has a small eigenvalue, the associated direction in H will escape both the 
     // Vector (I - T_bar)e
     line(e-pt, e-smoothed, mark: (end: "triangle", fill: main-purple), stroke: (paint: main-purple, thickness: 1.5pt)) // effect of smoother
     circle(e-smoothed, radius: 0.06, fill: black, stroke: none)
-    content(e-smoothed, padding: 0.15, $(I - overline(T))e$, anchor: "south-east")
+    content(e-smoothed, padding: 0.15, $(I - Tb)e$, anchor: "south-east")
 
     // Projections of smoothed error on axes
     // circle(e-H-smoothed, radius: 0.06, fill: rgb("d9534f"), stroke: none)
@@ -499,14 +518,14 @@ if X has a small eigenvalue, the associated direction in H will escape both the 
   })
 ]
 
-==== Z
+==== The operator Z
 
 The inverse of $X$ on $W_P^(perp_A)$ can be explicitly written as:
 $
-  Z = (overline(T))^(-1) (I - Q_c) quad : quad W_P^(perp_A) arrow.r.long W_P^(perp_A) 
+  Z = (Tb)^(-1) (I - Q_c) quad : quad W_P^(perp_A) arrow.r.long W_P^(perp_A) 
 $
 
-using $(u,v)_A = (overline(T) u,v)_(Ri)$ we have indeed, $forall u in W, forall v_P in W_P$:
+using $(u,v)_A = (Tb u,v)_(Ri)$ we have indeed, $forall u in W, forall v_P in W_P$:
 
 $
   (Z u, v)_A &= ( (I - Q_c) u, v )_(Ri) = 0
@@ -588,7 +607,7 @@ the distance is $ d_Ri (e,range(P)) = min_(e_P in range(P)) ||e - e_P||_Ri = ||(
 
 $Z$ allows to express this distance in the $A$-geometry:
 $
-  (Z v, v)_A = (overline(T)^(-1)(I - Q_c)v, v)_A &= (overline(T) overline(T)^(-1)(I - Q_c)v, v)_Ri \
+  (Z v, v)_A = (Tb^(-1)(I - Q_c)v, v)_A &= (Tb Tb^(-1)(I - Q_c)v, v)_Ri \
                                     &= ||(I - Q_c)v||_Ri^2 
 $
 and so in the worst case scenario we have:
@@ -621,23 +640,59 @@ If we take the minimum over the space of high frequency error $H^Ri = (W_P^(perp
 $
   1 / (K(V_c)) &lt.eq min_(w in H^Ri) max_(w_P in W_P) (||w||_A^2)/(||w - w_P||_Ri^2) \
   &= min_(w in H^Ri)(||w||_A^2)/(||w||_Ri^2) \
-  &= min_(w in H^Ri)(||overline(R)A w||_Ri^2)/(||w||_Ri^2) \
-  &= min_(w in H^Ri) r_(overline(R)A) (w)
+  &= min_(w in H^Ri)(||Rb A w||_Ri^2)/(||w||_Ri^2) \
+  &= min_(w in H^Ri) r_(Rb A) (w)
 $
 
 and so
 $
-  max_(dim V_c = n_c) 1 / (K(V_c)) &= max_(dim V_c = n_c) quad min_(w in H^Ri) quad r_(overline(R)A) (w)\
-  &= max_(dim H^Ri = n - (n_c + 1) + 1) quad min_(w in H^Ri) quad r_(overline(R)A) (w)\
+  max_(dim V_c = n_c) 1 / (K(V_c)) &= max_(dim V_c = n_c) quad min_(w in H^Ri) quad r_(Rb A) (w)\
+  &= max_(dim H^Ri = n - (n_c + 1) + 1) quad min_(w in H^Ri) quad r_(Rb A) (w)\
   &= mu_(n_c + 1)
 $
-by the max-min theorem (Courant-Fisher), with ${mu_j , q_j}$ the eigenpairs of $overline(R)A$ in increasing order.
+by the max-min theorem (Courant-Fisher), with ${mu_j , q_j}$ the eigenpairs of $Rb A$ in increasing order.
 
-The optimal two-grids convergence is then $||E||_A = 1 - mu_(n_c + 1)$\
+The optimal two-grids convergence is then $ ||E||_A = 1 - mu_(n_c + 1) $
 which is achieved by choosing $V_c$ so that $range(P) = "vect"{q_1, ..., q_n_c}$, \ ie $H^Ri = "vect"{q_(n_c + 1), ..., q_n}$ since:
 $
-  min_(w in "vect"{q_(n_c + 1), ..., q_n})(||overline(R)A w||_Ri^2)/(||w||_Ri^2) = mu_(n_c + 1)
+  min_(w in "vect"{q_(n_c + 1), ..., q_n})(||Rb A w||_Ri^2)/(||w||_Ri^2) = mu_(n_c + 1)
 $
 
 which can be obtained by setting $V_c = RR^(n_c)$ and $P = (q_1, q_2, ..., q_n)$
 // un exemple pour rigoler ?
+
+== Algebraic high and low frequencies
+
+=== Smooth error
+
+An error is smooth when it cannot be reduced by the smoother.
+
+Given a smoother $R: quad V arrow V$ and $epsilon in ]0,1[$, we say that $v in V$ is $epsilon$-smooth if
+$ ||v||_A^2 <= epsilon ||v||_Ri^2 $
+
+The effect of the smoother on any error $v in V$ is given by $S v = (I - R A)v$\
+we have:
+$
+  ||S v||_A^2 &= ((I - R A) v, (I - R A) v)_A \
+  &= ((I - Rb A) v, v)_A \
+  &= ||v||_A^2 - (Rb A v, v)_A
+$
+
+The norm reduction effect of the smoother is given by $(Rb A v, v)_A$, which will be small for $epsilon$-smooth errors:
+$
+  (Rb A v, v)_A <= epsilon ||v||_A arrow.double v "is" epsilon"-smooth"
+$
+
+$
+  ||v||_A^2 = (Rb A v, Ri v) &<= (Rb A v, v)_A^(1/2)||v||_Ri\
+  & <= sqrt(epsilon) ||v||_A||v||_Ri \
+  arrow.double ||v||_A^2 <= epsilon ||v||_Ri
+$
+
+and equivalently because $||S v||_A^2 = ||v||_A^2 - (Rb A v, v)_A$, we have
+
+$
+  (Rb A v, v)_A <= epsilon ||v||_A arrow.l.r.double.long (||S v||_A^2)/(||v||_A^2) >= 1 - epsilon
+$
+
+which is another way to see that the (normalized) norm reduction effect of the smoother will be small for $epsilon$-smooth errors

@@ -156,14 +156,14 @@ $ ||S T G||_A <= sqrt(1 - alpha/beta) < 1 $
 
 #pagebreak()
 
-== The problemsW_P\^\(perp_A\)
+== The problems
 
 - developed in a geometric settings
 - In practice $alpha$ and $beta$ are out of reach
 - sufficient but not necessary conditions
 
 
-= XZ Theory
+= Subspace Correction Theory
 
 == The promise 
 
@@ -291,7 +291,7 @@ $ E = (I - R A)(I - Pi_c) $
 == The Convergence Theorem
 
 We have:
-$ ||E||_A^2 = 1 - lambda_"min"(X) $
+$ ||E||_A^2 = 1 - lambda_"min" (X) $
 where $ X = (I - Pi_c) overline(T) quad : quad H^A -> H^A $
 
 $X$ represents the effect of the (symmetrized) smoother on the non-smooth errors.
@@ -374,11 +374,11 @@ $ (I - Pi_c)overline(E)|_H &= I - (I - Pi_c)overline(T) \
 
 #pagebreak()
 
-$ ||E||_A^2 = 1 - lambda_"min"(X) $
+$ ||E||_A^2 = 1 - lambda_"min" (X) $
 
 *Interpretation of $X$:* \
 - If $X approx I$ on $H$, the smoother is effective and the error is almost entirely annihilated: \
-  $lambda_"min"(X) approx 1$ and $||E||_A^2 = 1 - lambda_"min"(X) approx 0$
+  $lambda_"min" (X) approx 1$ and $||E||_A^2 = 1 - lambda_"min" (X) approx 0$
 
 - If $X$ has a small eigenvalue, the associated direction in $H$ will escape both the effect of the smoother and the coarse space correction: convergence will stagnate.
 
@@ -387,7 +387,7 @@ $ ||E||_A^2 = 1 - lambda_"min"(X) $
 The inverse of $X$ on $H^A$ can be explicitly written as:
 $ Z = overline(T)^(-1) (I - Q_c) quad : quad H^A -> H^A $
 
-So we have $ lambda_"min"(X) = 1 / (lambda_"max" (Z)) $
+So we have $ lambda_"min" (X) = 1 / (lambda_"max" (Z)) $
 
 #pagebreak()
 
