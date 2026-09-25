@@ -25,6 +25,10 @@
 #let Ri = $overline(R)^(-1)$
 #let Rb = $overline(R)$
 #let Tb = $overline(T)$
+#let Sb = $overline(S)$
+#let lm = $lambda_max$
+#let lk = $lambda_k$
+#let lmin = $lambda_min$
 
 // Document Title & Metadata
 #align(center)[
@@ -696,3 +700,85 @@ $
 $
 
 which is another way to see that the (normalized) norm reduction effect of the smoother will be small for $epsilon$-smooth errors
+
+== Numerical examples
+
+For a general operator $E$:
+
+$
+  ||E||_A^2 = sup_(||x||_A =  1 )||E x||_A^2 = sup_(||x||_A =  1 )(E x, E x)_A
+$
+when E is not self adjoint with respect to A:
+$
+  ||E||_A^2 = sup_(||x||_A =  1 )(E^T A E x, x) = sup_(||x||_A =  1 )(A^(-1)E^T A E x, x)_A
+$
+with $M = A^(-1)E^T A E$ self adjoint with respect to A:
+$
+  ||E||_A^2 = lambda_max (A^(-1)E^T A E)
+$
+instead when E is self adjoint with respect to A, this simplifies to:
+$
+  ||E||_A^2 = sup_(||x||_A =  1 )(E x, E x)_A = sup_(||x||_A =  1 )(E^*E x, x)_A = lambda_max (E^*E)
+$
+which is why for $S = I - R A$ and $S^*S = overline(E) = I - Rb A$ we have:
+$
+  ||S||_A^2 = lambda_max (Sb) = 1 - lambda_min (Rb A)
+$
+
+which is why to quantify the effect of the smoother, we will look at the eigenvalue of $Rb A$ instead of the more obvious $R A$
+
+For a 1D Laplacian operator A = tridiag(-1, 2, -1) of size n, 
+we have the eigenpairs for $ k in [| 1,n |]$:
+$
+  lk (A) = 4sin((k pi) / (2(n+1)))\
+  q_k (A) = ( sin((j k pi) / (n+1)) )_j
+$
+=== Weighted Jacobi
+
+$
+  R = omega D^(-1) = omega /2 I 
+$
+for $omega = 2/3$,
+$
+  S = I - 1/3 A \
+  Rb = R^T + R - R^T A R = R(I - A R) = 1/3(2 I - 1/3 A)  
+$
+$A, R, S "and" Rb A$ share the same eigenvectors:
+$
+  lk (Rb A) = lk(Rb) lk(A) = 1/3lk(A)(2 - 1/3lk(A))
+$
+and we have:
+$ A = U mat(
+  lambda_1(A), , , ;
+  , lambda_2(A), , ;
+  , , dots.down, ;
+  , , , lambda_n(A)
+) U^T, quad
+Tb = U mat(
+  lambda_1(Tb), , , ;
+  , lambda_2(Tb), , ;
+  , , dots.down, ;
+  , , , lambda_n(Tb)
+) U^T $
+
+to measure the action on $H^A$ we look at $ X = Tb (I - Pi_c)$
+
+$ I - Pi_c = U mat(
+  0, , , , , ;
+  , dots.down, , , , ;
+  , , 0, , , ;
+  , , , 1, , ;
+  , , , , dots.down, ;
+  , , , , , 1
+) U^T $
+
+we obtain
+
+$ X = U mat(
+  0, , , , , ;
+  , dots.down, , , , ;
+  , , 0, , , ;
+  , , , lambda_(n_c + 1)(Tb), , ;
+  , , ,  dots.down, ,;
+  , , , ,lambda_n (Tb)
+) U^T $
