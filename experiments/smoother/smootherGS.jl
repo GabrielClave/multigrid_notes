@@ -11,6 +11,11 @@ k_indices = 1:n
 λ_A = [4.0 * sin(k * π / (2 * (n + 1)))^2 for k in k_indices]
 
 Q = [sqrt(2 / (n + 1)) * sin(i * k * π / (n + 1)) for i in 1:n, k in 1:n]
+println("||Q'Q - I||_∞ = ", norm(Q'*Q - I, Inf)) # orthogonal basis: yes
+println("||Q' A Q - I||_∞ = ", norm(Q'*A*Q - I, Inf)) # A-orthogonal basis: no
+# do we want an A-orthogonal basis for the A geometry ?
+
+# λ_A, Q = eigen(A)
 
 # Gauss-Seidel Smoother
 D_L = LowerTriangular(A)
@@ -21,31 +26,39 @@ println("||R - R_exact||_∞ = ", norm(R - R_exact, Inf))
 
 R_bar = R' + R - R' * A * R
 
-# using the coarse space range(P) = eigenvectors of A with the n_c smallest eigenvalues
-P = Q[:, 1:n_c]
+# Split Q into smooth (P) and high-frequency (Q_high) spaces
+P = Q[:, 1:n_c] # using the coarse space range(P) = eigenvectors of A with the n_c smallest eigenvalues
+Q_high = Q[:, (n_c + 1):n]       # Matrix of size n x (n - n_c)
 
-Π_c = P*inv(P'*A*P)*P'
+Π_c = P*inv(P'*A*P)*P'*A
 
-X = R_bar * A * (I - Π_c)
+X = (I - Π_c)*R_bar * A  # here it is X: V -> V
 
 # is X A-self-adjoint ?
 is_A_self_adjoint = isapprox(A * X, X' * A, atol=1e-12)
 println("X is A-self-adjoint: ", is_A_self_adjoint) # not self adjoint
 
-λ_X = real(eigen(X).values) # negative ev ! and even a 0
+λ_X = real(eigen(X).values) # n_c 0 eigenvalue: because nul(X) = n_c
 sort!(λ_X, rev=true)
 
-# exact eigenvectors of X
-λ_X_analytical = [2.0 / λ_A[k] for k in (n_c + 1):n]
+# we want a X: H -> H operator
+# Q_high is the basis of H, Q_high'*Q_high = I
+# any v ∈ H can be expressed as v = Q_high*c, c a vector of dim n - n_c 
+# if Q_high' * A * Q_high = I, conversely c = Q_high' * A * v
 
-println("Max difference with analytical X spectrum: ", 
-        norm(sort(λ_X_modal[1:(n - n_c)]) - sort(λ_X_analytical), Inf))
+X_H = (I - Π_c)*R_bar * A * Q_high
+X_H*ones(n-n_c)
+
+X_modal = Q_high' * (I - Π_c)*R_bar * A * Q_high # (n - n_c) x (n - n_c)
+
+Λ_high = Diagonal(λ_A[(n_c + 1):n])
+is_A_self_adjoint = isapprox(Λ_high * X_modal, X_modal' * Λ_high, atol=1e-12) # true
+# println("X is A-self-adjoint: ", is_A_self_adjoint)
+
+λ_X_modal = real(eigen(X_modal).values) # n_c 0 eigenvalue: because nul(X) = n_c
+sort!(λ_X_modal, rev=true)
 
 Ri = inv(R_bar)
-
-# Verify S-GS exact identity: R_bar^-1 = 1/2 * A^2
-Ri_exact = 0.5 * (A^2)
-println("||R_bar^-1 - 0.5 A^2||_∞ = ", norm(Ri - Ri_exact, Inf))
 
 # eigenvalues, eigenvectors = f(Ri)
 
