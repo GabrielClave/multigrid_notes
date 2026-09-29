@@ -331,27 +331,33 @@ $
 #v(1cm)
 === Proof
 
-We notice that $||(I - R A) v||_A^2 = ((I - Rb A) v, v)_A$ for all $v in V$.
+For all $v in V$
+$
+  ||(I - R A) v||_A^2
+  &= ((I - R A) v, (I - R A) v)_A \
+  &= ((I - R A)^*(I - R A) v, v)_A \
+  &= ((I - Rb A) v, v)_A \
+$
 
-Then we have:
+We then have:
 $
   ||E||_A^2 &= max_(w in W) (||(I - R A)(I - Pi_c) w||_A^2) / (||w||_A^2) \
   &= max_(w in W) (((I - Rb A)(I - Pi_c) w, (I - Pi_c) w)_A) / (||w||_A^2) \
   &= 1 - min_(w in W) ((Rb A (I - Pi_c) w, (I - Pi_c) w)_A) / (||w||_A^2) \
-  &= 1 - min_(w in W) ((Q_W Rb A (I - Pi_c) w, (I - Pi_c) w)_A) / (||(I - Pi_c) w||_A^2 + ||Pi_c w||_A^2) \
-  &= 1 - min_(v in W_P^(perp_A)) ((Q_W Rb A v, v)_A) / (||v||_A^2) \
-  &= 1 - min_(v in W_P^(perp_A)) (((I - Pi_c) Q_W Rb A v, v)_A) / (||v||_A^2) \
+  &= 1 - min_(w in W) ((Rb A (I - Pi_c) w, (I - Pi_c) w)_A) / (||(I - Pi_c) w||_A^2 + ||Pi_c w||_A^2) \
+  &= 1 - min_(v in H^A) (( Rb A v, v)_A) / (||v||_A^2) \
+  &= 1 - min_(v in H^A) (((I - Pi_c) Q_W Rb A v, v)_A) / (||v||_A^2) \
   &= 1 - lambda_(min)(X),
 $
 
-where $ X = (I - Pi_c) Q_W Rb A quad : quad W_P^(perp_A) arrow.r.long W_P^(perp_A) $
+where $ X = (I - Pi_c) Rb A quad : quad H^A arrow.r.long H^A $
 
 #v(1cm)
 
 additional details:
 
 $
-  ((Rb A (I - Pi_c) w, (I - Pi_c) w)_A) / (||w||_A^2) = ((Q_W Rb A (I - Pi_c) w, (I - Pi_c) w)_A) / (||(I - Pi_c) w||_A^2 + ||Pi_c w||_A^2)
+  ((Rb A (I - Pi_c) w, (I - Pi_c) w)_A) / (||w||_A^2) = ((Rb A (I - Pi_c) w, (I - Pi_c) w)_A) / (||(I - Pi_c) w||_A^2 + ||Pi_c w||_A^2)
 $
 
 $Rb A (I - Pi_c) w in range(Tb) = W$ so it is unchanged by $Q_W$ \
@@ -360,11 +366,11 @@ $||w||_A^2 = ||(I - Pi_c) w||_A^2 + ||Pi_c w||_A^2$ using the orthogonal decompo
 #v(1cm)
 
 $
-  (Q_W Rb A v, v)_A = ((I-Pi_c)Q_W Rb A v, v)_A
+  (Q_W Rb A v, v)_A = ((I-Pi_c) Rb A v, v)_A
 $
 
-$Q_W Rb A v in W$, so it is composed of some part along $W_P$ that will vanish when applying the scalar product with $v in W_P^perp_A$: \
-$ forall w in W, v in W_P^(perp_A), quad(w,v)_A = ((I-Pi_c)w,v)_A $
+$Rb A v in range(Rb A) = W$, so it is composed of some part along $W_P$ that will vanish when applying the scalar product with $v in H^A perp W_P$: \
+$ forall w in W, v in H^A, quad(w,v)_A = ((I-Pi_c)w,v)_A $
 
 #align(center)[
   #cetz.canvas({
@@ -435,7 +441,7 @@ $ forall w in W, v in W_P^(perp_A), quad(w,v)_A = ((I-Pi_c)w,v)_A $
 ==== The operator X
 
 $
-  X = (I - Pi_c) Tb quad : quad W_P^(perp_A) arrow.r.long W_P^(perp_A)
+  X = (I - Pi_c) Tb quad : quad H^A arrow.r.long H^A
 $
 
 X is self-adjoint with respect to $(dot, dot)_A$, as $I-Pi_c$ is an $A$-orthogonal projection and $Rb$ is SPD.\
@@ -509,7 +515,7 @@ if X has a small eigenvalue, the associated direction in H will escape both the 
 
     // Projections of smoothed error on axes
     // circle(e-H-smoothed, radius: 0.06, fill: rgb("d9534f"), stroke: none)
-    content(e-H-smoothed, padding: 0.15, $(I - X)e_H$, anchor: "east")
+    content(e-H-smoothed, padding: 0.15, $(I - Pi_c)(I - Tb)e_H\ =(I - X)e_H$, anchor: "east")
     // circle(e-P-smoothed, radius: 0.06, fill: rgb("d9534f"), stroke: none)
 
     // Action of smoother on H^A component (reduction arrow)
@@ -725,7 +731,7 @@ $
   ||S||_A^2 = lambda_max (Sb) = 1 - lambda_min (Rb A)
 $
 
-which is why to quantify the effect of the smoother, we will look at the eigenvalue of $Rb A$ instead of the more obvious $R A$
+in order to quantify the effect of the smoother, we will look at the eigenvalue of $Rb A$ instead of the more obvious $R A$
 
 For a 1D Laplacian operator A = tridiag(-1, 2, -1) of size n, 
 we have the eigenpairs for $ k in [| 1,n |]$:
@@ -770,7 +776,7 @@ $ I - Pi_c = U mat(
   , , , 1, , ;
   , , , , dots.down, ;
   , , , , , 1
-) U^T $
+) U^T , quad "for " range(P) = range(q_1, dots , q_(n_c) ) $
 
 we obtain
 
@@ -781,4 +787,18 @@ $ X = U mat(
   , , , lambda_(n_c + 1)(Tb), , ;
   , , ,  dots.down, ,;
   , , , ,lambda_n (Tb)
-) U^T $
+) U^T quad X: V arrow V $
+
+So 
+$ X = U_H mat(
+   lambda_(n_c + 1)(Tb), , ;
+   dots.down , ;
+   quad quad quad quad lambda_n (Tb)
+) U_H^T quad X: H^A arrow H^A, quad U_H = U[ n_c + 1 : n] $
+
+The two grid convergence is governed by
+$
+||E||_A^2 &= 1 - lmin(X)\ 
+&= lambda_(n_c + 1)(Tb)\
+&= 1 - 1/3lambda_(n_c + 1)(A)(2 - 1/3lambda_(n_c + 1)(A))
+$

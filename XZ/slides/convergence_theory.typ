@@ -15,11 +15,80 @@
   ),
 )
 
-#let Ri = $overline(R)^(-1)$
 #let range = math.op("range")
 #let nul = math.op("null")
 #let im = math.op("Im")
 #let ker = math.op("ker")
+#let Ri = $overline(R)^(-1)$
+#let Rb = $overline(R)$
+#let Tb = $overline(T)$
+#let Sb = $overline(S)$
+#let lm = $lambda_max$
+#let lk = $lambda_k$
+#let lmin = $lambda_min$
+
+// figures
+
+#let smoother-error-figure = cetz.canvas({
+    import cetz.draw: *
+
+    let circle_radius = 0.06
+    let margin = 1
+    let main-purple = rgb("#7570b3")
+    let red-accent  = rgb("#e04040")
+
+    // Define main points
+    let orig = (0, 0)
+    let eh = 5.5
+    let ep = 7.5
+    let e-pt = (ep, eh)          // Initial error vector e
+    let e-H = (0, eh)          // High-frequency component e_H
+    let e-P = (ep, 0)            // Coarse-space component e_P
+    let e-smoothed = (5, 0.9)   // Error after smoother: (I - T_bar) e
+    let e-H-smoothed = (0, 0.9) // Reduced high-frequency component (I - X) e_H
+    let e-P-smoothed = (5, 0) // Slightly reduced coarse component
+
+    // Set coordinate system and axes
+    line((-0.5, 0), (10, 0), stroke: 1pt, name: "x-axis")
+    line((0, -0.5), (0, 8), stroke: 1pt, name: "y-axis")
+
+    content((10 + 0.5, 0), $text(range)(P)$, anchor: "west")
+    content((0, 8 + 0.5), $H^A$, anchor: "south")
+
+    // --- INITIAL STATE e ---
+    // Dashed projection lines for e
+    line(e-pt, e-H, stroke: (dash: "dashed", paint: gray))
+    line(e-pt, e-P, stroke: (dash: "dashed", paint: gray))
+
+    // Projections of e on axes
+    // circle(e-H, radius: 0.06, fill: blue, stroke: none)
+    content(e-H, padding: 0.15, $e_H$, anchor: "east")
+    // circle(e-P, radius: 0.06, fill: blue, stroke: none)
+    content(e-P, padding: 0.15, $e_P$, anchor: "north")
+
+    // --- STATE AFTER SMOOTHER (I - T_bar)e ---
+    // Dashed projection lines for smoothed error
+    line(e-smoothed, e-H-smoothed, stroke: (dash: "dashed", paint: gray))
+    line(e-smoothed, e-P-smoothed, stroke: (dash: "dashed", paint: gray))
+
+    // Vector (I - T_bar)e
+    line(e-pt, e-smoothed, mark: (end: "triangle", fill: main-purple), stroke: (paint: main-purple, thickness: 1.5pt)) // effect of smoother
+    circle(e-smoothed, radius: 0.06, fill: black, stroke: none)
+    content(e-smoothed, padding: 0.15, $(I - R A)e$, anchor: "south-east")
+
+    // Projections of smoothed error on axes
+    // circle(e-H-smoothed, radius: 0.06, fill: rgb("d9534f"), stroke: none)
+    content(e-H-smoothed, padding: 0.15, $(I - Pi_c)(I - R A)e_H\ = "important part"$, anchor: "east")
+    // circle(e-P-smoothed, radius: 0.06, fill: rgb("d9534f"), stroke: none)
+
+    // Action of smoother on H^A component (reduction arrow)
+    line((0, eh), (0, 0.9), mark: (end: "triangle", fill: red-accent), stroke: (paint: red-accent, thickness: 1pt))
+    // content((-0.1, 2.2), text(size: 8pt, fill: red-accent)[$text("Smoother action on \n high frequency error")$], anchor: "east")
+
+    // Vector e
+    circle(e-pt, radius: 0.06, fill: black, stroke: none)
+    content(e-pt, $e$, padding: 0.15, anchor: "south-west")
+  })
 
 // Generate the title slide
 #title-slide()
@@ -28,7 +97,7 @@
 
 A multigrid solver relies on three core ingredients:
 
-- A *Smoother $S$* eliminates error in a subspace $H$.
+- A *Smoother $R$* eliminates error in a subspace $H$.
 - A *Coarse Grid* & Interpolation ($P$)
 - A *Coarse Solver* (can recursively be another multigrid cycle).
 
@@ -42,7 +111,101 @@ Ensuring that error components missed by the smoother are effectively captured a
 
 #align(center)[
   #image("../../pictures/MG Convergence(2).png", width: 80%)
-  ]
+]
+
+== Some notations (smoothers)
+The first component of a multigrid solver is a smoother.\
+It is a linear operator $R : V arrow.r.long V$ that can be used to solve the system through the  iteration:
+$
+  v^((k+1)) = v^((k)) + R(f - A v^((k)))
+$
+with associated error propagation operator
+$
+  S = I - R A
+$
+
+== Some notations (subspace decomposition)
+
+#align(center)[
+  #cetz.canvas({
+    import cetz.draw: *
+
+    let x0 = 0.0
+    let xN = 4.0
+    let xP = xN + 2
+    let xend = 12.0
+
+    let y0 = 0.0
+    let yend = 2.0
+    let margin = 0.25
+
+    // Custom palette
+    let main-purple = rgb("#7570b3")
+    let light-purple = rgb("#c1bfda").transparentize(65%)
+    let red-accent  = rgb("#e04040")
+    let gray-bg     = rgb("#f0f0f0")
+
+    let brace-margin = 2.5*margin
+
+    set-style(
+      content: (padding: 0.1),
+      text: (size: 20pt)
+    )
+
+    // Entire space V
+    rect((x0, y0), (xend, yend), stroke: 1pt, name: "V_rect")
+
+    // Complementary space H^A
+    content(((xP + xend) / 2, (y0 + yend) / 2), $H^A = "range"(P)^(perp_A)$)
+
+    // Outer dashed box for Range(P)
+    rect(
+      (x0, y0),
+      (xP, yend),
+      fill: light-purple
+    )
+
+    content(((xP / 2), (y0 + yend) / 2), $"range"(P)$)
+
+    // low freq brace
+    cetz.decorations.brace((xP - 0.25*margin, y0 - brace-margin), (x0, y0 - brace-margin), name: "b_low")
+    content(
+      (rel: (0, -margin), to: "b_low.center"),
+      [#text("low frequency error")],
+      anchor: "north"
+    )
+
+    // high freq brace
+    cetz.decorations.brace((xend, y0 - brace-margin), (xP + 0.25*margin, y0 - brace-margin), name: "b_low")
+    content(
+      (rel: (0, -margin), to: "b_low.center"),
+      [#text("High frequency error")],
+      anchor: "north"
+    )
+  })
+]
+
+== Some notations (projections)
+
+We define the following $A$-orthogonal projection:
+
+$
+  Pi_c : V &arrow.r.long range(P)\
+
+$
+
+// #v(1cm)
+
+// We define the following $Ri$-orthogonal projections:
+
+// $
+//  Q_c: V &arrow.r.long range(P)\
+// $
+// 
+== Two-Grids Operator
+
+The multigird error transfer operator is:
+$ E = (I - R A)(I - Pi_c) $
 
 = Classic Convergence Theory
 
@@ -51,9 +214,10 @@ Ensuring that error components missed by the smoother are effectively captured a
 An error is smooth when it cannot be reduced effectively by the smoother
 #v(1cm)
 $ S e &approx e \
-  (I - M^(-1)N)e &approx 0 \
-  (M - N)e &approx 0 \
-  A e = r &approx 0 $
+  arrow.double A e = r &approx 0
+$
+
+(or more rigorously when $||r||_(D^(-1)) << ||e||_A$)
 
 == Oscillatory error
 
@@ -174,106 +338,76 @@ $ ||S T G||_A <= sqrt(1 - alpha/beta) < 1 $
 
 // - they allegedly developed a unified theory ("subspace correction methods") applicable for domain decomposition and multigrid
 
-== Some notations (smoothers)
-The first component of a multigrid solver is a smoother.\
-It is a linear operator $R : V arrow.r.long V$ that can be used to solve the system through the  iteration:
-$
-  v^((k+1)) = v^((k)) + R(f - A v^((k)))
-$
-with associated error propagation operator
-$
-  E = I - R A
-$
-If $R$ is not symmetric, it can be symmetrized through:
-
-$
-  overline(R) = R + R^T - R^T A R
-$
-
-with
-$
-  overline(E) = I - overline(R) A = (I - R^T A)(I - R A)\  
-$
-
-== Some notations (subspace decomposition)
+== Informal Motivation
 
 #align(center)[
-  #cetz.canvas({
-    import cetz.draw: *
-
-    let x0 = 0.0
-    let xN = 4.0
-    let xP = xN + 2
-    let xend = 12.0
-
-    let y0 = 0.0
-    let yend = 2.0
-    let margin = 0.25
-
-    // Custom palette
-    let main-purple = rgb("#7570b3")
-    let light-purple = rgb("#c1bfda").transparentize(65%)
-    let red-accent  = rgb("#e04040")
-    let gray-bg     = rgb("#f0f0f0")
-
-    let brace-margin = 2.5*margin
-
-    set-style(
-      content: (padding: 0.1),
-      text: (size: 20pt)
-    )
-
-    // Entire space V
-    rect((x0, y0), (xend, yend), stroke: 1pt, name: "V_rect")
-
-    // Complementary space H^A
-    content(((xP + xend) / 2, (y0 + yend) / 2), $H^A = "range"(P)^(perp_A)$)
-
-    // Outer dashed box for Range(P)
-    rect(
-      (x0, y0),
-      (xP, yend),
-      fill: light-purple
-    )
-
-    content(((xP / 2), (y0 + yend) / 2), $"range"(P)$)
-
-    // low freq brace
-    cetz.decorations.brace((xP - 0.25*margin, y0 - brace-margin), (x0, y0 - brace-margin), name: "b_low")
-    content(
-      (rel: (0, -margin), to: "b_low.center"),
-      [#text("low frequency error")],
-      anchor: "north"
-    )
-
-    // high freq brace
-    cetz.decorations.brace((xend, y0 - brace-margin), (xP + 0.25*margin, y0 - brace-margin), name: "b_low")
-    content(
-      (rel: (0, -margin), to: "b_low.center"),
-      [#text("High frequency error")],
-      anchor: "north"
-    )
-  })
+  #smoother-error-figure
 ]
 
-== Some notations (projections)
+#pagebreak()
 
-We define the following $A$-orthogonal projections:
+The vector $(I - Pi_c)(I - R A)e_H$ represents the residual error on $H$.
 
-$
-  Pi_c : V &arrow.r.long range(P)\
-
-$
+The smaller $||(I - Pi_c)(I - R A)e_H||_A$ the better.
 
 #v(1cm)
 
-We define the following $Ri$-orthogonal projections:
+Informally, let's assume that $(I - R A)e_H in H$ and that $R A$ is symmetric.
 
-$
- Q_c: V &arrow.r.long range(P)\
-$
+For a normalized error $||e_H||_A = 1$, the maximum error is bounded by:
 
-#pagebreak()
+$ sup_(e_H in H) ||(I - R A)e_H||_A = lm(I - R A) = 1 - lmin(R A) $
+
+
+== The Ideal Smoother
+
+An ideal smoother would make $(I - R A)$ the $A$-orthogonal projection onto $range(P)$.
+
+If we write the eigendecomposition of $A$:
+$ A = U mat(
+  lambda_1(A), , , ;
+  , lambda_2(A), , ;
+  , , dots.down, ;
+  , , , lambda_n(A)
+) U^T $
+
+Then the operators would take the form:
+$ I - R A = U mat(
+  1, , , , , ;
+  , dots.down, , , , ;
+  , , 1, , , ;
+  , , , 0, , ;
+  , , , , dots.down, ;
+  , , , , , 0
+) U^T 
+quad "and" quad
+R A = U mat(
+  0, , , , , ;
+  , dots.down, , , , ;
+  , , 0, , , ;
+  , , , 1, , ;
+  , , , , dots.down, ;
+  , , , , , 1
+) U^T $
+
+
+== The Ideal Smoother
+
+Under these conditions, the error transfer operator vanishes entirely:
+$ E = (I - R A)(I - Pi_c) = 0 $
+
+This is achieved when $R$ acts as the perfect inverse of $A$ on the high-frequency space $H$:
+
+$ R = U mat(
+  0, , , , , ;
+  , dots.down, , , , ;
+  , , 0, , , ;
+  , , , 1/lambda_(n_(c+1)), , ;
+  , , , , dots.down, ;
+  , , , , , 1/lambda_n
+) U^T $
+
+and on $H$ we have indeed $lmin (R A) = 1$
 
 == Two-Grids Operator
 
@@ -286,21 +420,35 @@ A two-grid correction operator is an operator $B : V' -> V$ that acts on $f in V
 The associated error transfer operator is:
 $ E = (I - R A)(I - Pi_c) $
 
-#pagebreak()
-
 == The Convergence Theorem
 
-We have:
-$ ||E||_A^2 = 1 - lambda_"min" (X) $
-where $ X = (I - Pi_c) overline(T) quad : quad H^A -> H^A $
+The effect of the smoother on any error $e in H$ is given by $S e = (I - R A)e$\
+we have:
+$
+  ||S e||_A^2 &= ((I - R A) e, (I - R A) e)_A \
+  &= ((I - R A)^*(I - R A) e, e)_A \
+$
 
-$X$ represents the effect of the (symmetrized) smoother on the non-smooth errors.
+$(I - R A)^*$ the adjoint of $(I - R A)$ with respect to A\
+$(I - R A)^* = (I - R^T A)$
 
-== The Operator X
+and $ (I - R^T A)(I - R A) = I - Rb A \
+"with" Rb = R + R^T - R^T A R $
+acting as a symmetrized version of the smoother (equivalent to applying the smoother $R$ then its transpose $R^T$)
 
-$X$ represents the effect of the (symmetrized) smoother on the non-smooth errors.
+#pagebreak()
 
-#v(2cm)
+$
+  ||S||_A^2 &= max_(e in H) (||S e||_A^2) / (||e||_A^2) \
+   &= max_(e in H) (((I - Rb A)e,e)_A) / ((e,e)_A)\
+   &= lm(I - Rb A)\
+   &= 1 - lmin(Rb A)
+$
+
+#pagebreak()
+
+== The operator X
+
 #align(center)[
   #cetz.canvas({
     import cetz.draw: *
@@ -312,19 +460,21 @@ $X$ represents the effect of the (symmetrized) smoother on the non-smooth errors
 
     // Define main points
     let orig = (0, 0)
-    let e-pt = (4.5, 3.5)          // Initial error vector e
-    let e-H = (0, 3.5)            // High-frequency component e_H
-    let e-P = (4.5, 0)            // Coarse-space component e_P
-    let e-smoothed = (3, 0.9)   // Error after smoother: (I - T_bar) e
+    let eh = 5.5
+    let ep = 7.5
+    let e-pt = (ep, eh)          // Initial error vector e
+    let e-H = (0, eh)          // High-frequency component e_H
+    let e-P = (ep, 0)            // Coarse-space component e_P
+    let e-smoothed = (5, 0.9)   // Error after smoother: (I - T_bar) e
     let e-H-smoothed = (0, 0.9) // Reduced high-frequency component (I - X) e_H
-    let e-P-smoothed = (3, 0) // Slightly reduced coarse component
+    let e-P-smoothed = (5, 0) // Slightly reduced coarse component
 
     // Set coordinate system and axes
-    line((-0.5, 0), (5.5, 0), stroke: 1pt, name: "x-axis")
-    line((0, -0.5), (0, 4.5), stroke: 1pt, name: "y-axis")
+    line((-0.5, 0), (10, 0), stroke: 1pt, name: "x-axis")
+    line((0, -0.5), (0, 8), stroke: 1pt, name: "y-axis")
 
-    content((5.6, 0), $text(range)(P)$, anchor: "west")
-    content((0, 4.6), $H^A$, anchor: "south")
+    content((10 + 0.5, 0), $text(range)(P)$, anchor: "west")
+    content((0, 8 + 0.5), $H^A$, anchor: "south")
 
     // --- INITIAL STATE e ---
     // Dashed projection lines for e
@@ -345,16 +495,16 @@ $X$ represents the effect of the (symmetrized) smoother on the non-smooth errors
     // Vector (I - T_bar)e
     line(e-pt, e-smoothed, mark: (end: "triangle", fill: main-purple), stroke: (paint: main-purple, thickness: 1.5pt)) // effect of smoother
     circle(e-smoothed, radius: 0.06, fill: black, stroke: none)
-    content(e-smoothed, padding: 0.15, $(I - overline(T))e$, anchor: "south-east")
+    content(e-smoothed, padding: 0.15, $(I - Rb A)e$, anchor: "south-east")
 
     // Projections of smoothed error on axes
     // circle(e-H-smoothed, radius: 0.06, fill: rgb("d9534f"), stroke: none)
-    content(e-H-smoothed, padding: 0.15, $(I - X)e_H$, anchor: "east")
+    content(e-H-smoothed, padding: 0.15, $(I - Pi_c)(I - Rb A)e_H\ =(I - (I - Pi_c)Rb A)e_H\ = (I - X)e_H$, anchor: "east")
     // circle(e-P-smoothed, radius: 0.06, fill: rgb("d9534f"), stroke: none)
 
     // Action of smoother on H^A component (reduction arrow)
-    line((0, 3.5), (0, 0.9), mark: (end: "triangle", fill: red-accent), stroke: (paint: red-accent, thickness: 1pt))
-    content((-0.1, 2.2), text(size: 8pt, fill: red-accent)[$text("Smoother action on \n high frequency error")$], anchor: "east")
+    line((0, eh), (0, 0.9), mark: (end: "triangle", fill: red-accent), stroke: (paint: red-accent, thickness: 1pt))
+    // content((-0.1, 2.2), text(size: 8pt, fill: red-accent)[$text("Smoother action on \n high frequency error")$], anchor: "east")
 
     // Vector e
     circle(e-pt, radius: 0.06, fill: black, stroke: none)
@@ -362,15 +512,27 @@ $X$ represents the effect of the (symmetrized) smoother on the non-smooth errors
   })
 ]
 
+$
+  X = (I - Pi_c) Rb A : quad H^A -> H^A
+$
+
 #pagebreak()
 
-the effect of the two-grids cycle on $e in H$ is:
-$ overline(E)|_H &= (I - overline(T))( I - Pi_c ) \
-                 &= I - overline(T) quad (I - Pi_c = I "on" H) $
+with the same idea, for a general $v in V$, we have:
+$ ||E||_A^2 = ||(I - R A)(I - Pi_c)||_A^2 = 1 - lambda_"min" (X) $
+where $ X = (I - Pi_c) Rb A quad : quad H^A -> H^A $
 
-The components along $H$ are given by:
-$ (I - Pi_c)overline(E)|_H &= I - (I - Pi_c)overline(T) \
-                            &= I - X $
+$X$ represents the effect of the (symmetrized) smoother on the non-smooth errors.
+
+// #pagebreak()
+
+// the effect of the two-grids cycle on $e in H$ is:
+// $ overline(E)|_H &= (I - overline(T))( I - Pi_c ) \
+//                  &= I - overline(T) quad (I - Pi_c = I "on" H) $
+
+// The components along $H$ are given by:
+// $ (I - Pi_c)overline(E)|_H &= I - (I - Pi_c)overline(T) \
+//                             &= I - X $
 
 #pagebreak()
 
@@ -484,12 +646,9 @@ the effectiveness of a two-grids method depends on how well the coarse space can
 
 == Optimal coarse space
 
+The convergence rate is maximal when $||E||_A^2 = 1 - 1 / K(V_c)$ is minimal, i.e when $K(V_c)$ is minimal
+
 Given the eigenpairs of $overline(R)A$ $(q_i , mu_i)$
 
 The optimal two-grids convergence is when $ ||E||_A = 1 - mu_(n_c + 1) $
 This is achieved by choosing $V_c$ so that $op("range")(P) = op("span"){q_1, ..., q_(n_c)}$,\
- i.e., $H^(Ri) = op("span"){q_(n_c + 1), ..., q_n}$, since:
-
-$ min_(w in op("span"){q_(n_c + 1), ..., q_n}) (||overline(R)A w||_(Ri)^2) / (||w||_(Ri)^2) = mu_(n_c + 1) $
-
-This can be obtained by setting $V_c = RR^(n_c)$ and $P = (q_1, q_2, ..., q_(n_c))$.
