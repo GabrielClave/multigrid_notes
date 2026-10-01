@@ -1,82 +1,87 @@
 using LinearAlgebra
+using CSV
+using DataFrames
 
-n = 50
-n_c = 20
+n = 49
+n_c = 24
 
 # 1D Laplacian
 A = SymTridiagonal(2.0 * ones(n), -1.0 * ones(n - 1))
 
-# eigenvalues and eigenvectors of A
+# Exact Fourier basis Q (Euclidean orthonormal)
 k_indices = 1:n
 λ_A = [4.0 * sin(k * π / (2 * (n + 1)))^2 for k in k_indices]
-
 Q = [sqrt(2 / (n + 1)) * sin(i * k * π / (n + 1)) for i in 1:n, k in 1:n]
-println("||Q'Q - I||_∞ = ", norm(Q'*Q - I, Inf)) # orthogonal basis: yes
-println("||Q' A Q - I||_∞ = ", norm(Q'*A*Q - I, Inf)) # A-orthogonal basis: no
-# do we want an A-orthogonal basis for the A geometry ?
 
-# λ_A, Q = eigen(A)
-
-# Gauss-Seidel Smoother
+# Symmetric Gauss-Seidel Smoother R_bar
 D_L = LowerTriangular(A)
 R = inv(D_L)
-
-R_exact = [i >= j ? (0.5)^(i - j + 1) : 0.0 for i in 1:n, j in 1:n]
-println("||R - R_exact||_∞ = ", norm(R - R_exact, Inf))
-
 R_bar = R' + R - R' * A * R
+T_bar = R_bar * A
 
-# Split Q into smooth (P) and high-frequency (Q_high) spaces
-P = Q[:, 1:n_c] # using the coarse space range(P) = eigenvectors of A with the n_c smallest eigenvalues
-Q_high = Q[:, (n_c + 1):n]       # Matrix of size n x (n - n_c)
-
-Π_c = P*inv(P'*A*P)*P'*A
-
-X = (I - Π_c)*R_bar * A  # here it is X: V -> V
-
-# is X A-self-adjoint ?
-is_A_self_adjoint = isapprox(A * X, X' * A, atol=1e-12)
-println("X is A-self-adjoint: ", is_A_self_adjoint) # not self adjoint
-
-λ_X = real(eigen(X).values) # n_c 0 eigenvalue: because nul(X) = n_c
-sort!(λ_X, rev=true)
-
-# we want a X: H -> H operator
-# Q_high is the basis of H, Q_high'*Q_high = I
-# any v ∈ H can be expressed as v = Q_high*c, c a vector of dim n - n_c 
-# if Q_high' * A * Q_high = I, conversely c = Q_high' * A * v
-
-X_H = (I - Π_c)*R_bar * A * Q_high
-X_H*ones(n-n_c)
-
-X_modal = Q_high' * (I - Π_c)*R_bar * A * Q_high # (n - n_c) x (n - n_c)
-
+# -------------------------------------------------------------
+# 1. MODAL COARSE SPACE (First n_c Fourier modes)
+# -------------------------------------------------------------
+P_modal = Q[:, 1:n_c] #range(P) = low frequency modes
+Q_high = Q[:, (n_c + 1):n] # H = high frequency modes
 Λ_high = Diagonal(λ_A[(n_c + 1):n])
-is_A_self_adjoint = isapprox(Λ_high * X_modal, X_modal' * Λ_high, atol=1e-12) # true
-# println("X is A-self-adjoint: ", is_A_self_adjoint)
 
-λ_X_modal = real(eigen(X_modal).values) # n_c 0 eigenvalue: because nul(X) = n_c
-sort!(λ_X_modal, rev=true)
+Π_c_modal = P_modal * inv(P_modal' * A * P_modal) * P_modal' * A # A-orthogonal projection onto range(P)
+X_modal_full = (I - Π_c_modal) * T_bar # n x n matrix here, acts on the full V, not just H
 
-Ri = inv(R_bar)
+# Check A-self-adjointness on V: A*X == X'*A
+println("X_modal is A-self-adjoint on V: ", isapprox(A * X_modal_full, X_modal_full' * A, atol=1e-11))
+# not A-self-adjoint -> are we missing something or is it floating point cachotteries ? 
 
-# eigenvalues, eigenvectors = f(Ri)
+# Restricted operator on H^A using A-orthonormal basis Q_high_A
+Q_high_A = Q_high * inv(sqrt(Λ_high))
+X_modal_H = Q_high_A' * A * X_modal_full * Q_high_A # Euclidean symmetric -> TO DO
+println("X_modal_H is symmetric: ", isapprox(X_modal_H, X_modal_H', atol=1e-11))
 
-# are eigenvectors orthonormal ?
-# else orthogonalize
+λ_X_modal = sort(real(eigen(X_modal_H).values), rev=true)
 
-# using the optimal coarse space for Gauss-Seidel
+# -------------------------------------------------------------
+# 2. XZ-OPTIMAL COARSE SPACE (Smallest eigenmodes of T_bar)
+# -------------------------------------------------------------
+F_Tbar = eigen(T_bar)
+idx_opt = sortperm(real(F_Tbar.values)) # Sort ascending μ_1 <= μ_2 ...
+μ_Tbar = real(F_Tbar.values)[idx_opt]
+Q_Tbar = real(F_Tbar.vectors)[:, idx_opt] # is this one orthogonal ? Ri-orthogonal ? does it matter ?
 
-# P = f1 to fn_c
-# Π_c = P*inv(P'*A*P)*P'
+P_opt = Q_Tbar[:, 1:n_c]
+Π_c_opt = P_opt * inv(P_opt' * A * P_opt) * P_opt' * A
+X_opt_full = (I - Π_c_opt) * T_bar
 
-# X = R_bar * A * (I - Π_c)
+λ_X_opt_nonzero = sort(filter(x -> x > 1e-8, real(eigen(X_opt_full).values)), rev=true)
 
-# is.symmetric(X)
+# -------------------------------------------------------------
+# 3. GMG LINEAR INTERPOLATION COARSE SPACE
+# -------------------------------------------------------------
+P_gmg = zeros(n, n_c)
+for j in 1:n_c
+    i = 2 * j
+    P_gmg[i - 1, j] = 0.5
+    P_gmg[i,     j] = 1.0
+    P_gmg[i + 1, j] = 0.5
+end
 
-# eigenvalues, eigenvectors = f(X)
+Π_c_gmg = P_gmg * inv(P_gmg' * A * P_gmg) * P_gmg' * A
+X_gmg_full = (I - Π_c_gmg) * T_bar
 
-# save eigenvalues
+λ_X_gmg_nonzero = sort(filter(x -> x > 1e-8, real(eigen(X_gmg_full).values)), rev=true)
 
-R_bar_test = R'*Diagonal(2*ones(n))*R
-inv(R_bar_test)
+# -------------------------------------------------------------
+# EXPORT TO CSV
+# -------------------------------------------------------------
+num_high_modes = n - n_c
+k_high_norm = [(n_c + k) / (n + 1) for k in 1:num_high_modes]
+
+df = DataFrame(
+    k_mode = 1:num_high_modes,
+    k_norm = k_high_norm,
+    Modal = λ_X_modal,
+    GMG = λ_X_gmg_nonzero,
+    XZ_Optimal = λ_X_opt_nonzero
+)
+
+CSV.write("experiments/data/spectrum_X_GS.csv", df)

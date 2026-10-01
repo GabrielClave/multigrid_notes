@@ -352,11 +352,11 @@ The smaller $||(I - Pi_c)(I - R A)e_H||_A$ the better.
 
 #v(1cm)
 
-Informally, let's assume that $(I - R A)e_H in H$ and that $R A$ is symmetric.
+Informally, let's assume that $(I - R A)e_H in H$,\ meaning $(I - Pi_c)(I - R A)e_H = (I - R A)e_H$ and that $R A$ is "symmetric".
 
 For a normalized error $||e_H||_A = 1$, the maximum error is bounded by:
 
-$ sup_(e_H in H) ||(I - R A)e_H||_A = lm(I - R A) = 1 - lmin(R A) $
+$ sup_(e_H in H \ ||e_H||_A = 1)||S e_H|| = sup_(e_H in H \ ||e_H||_A = 1) ||(I - R A)e_H||_A = lm(I - R A) = 1 - lmin(R A) $
 
 
 == The Ideal Smoother
