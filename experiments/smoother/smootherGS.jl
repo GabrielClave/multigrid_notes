@@ -2,8 +2,8 @@ using LinearAlgebra
 using CSV
 using DataFrames
 
-n = 49
-n_c = 24
+n = 501
+n_c = 250
 
 # 1D Laplacian
 A = SymTridiagonal(2.0 * ones(n), -1.0 * ones(n - 1))
@@ -17,7 +17,14 @@ Q = [sqrt(2 / (n + 1)) * sin(i * k * π / (n + 1)) for i in 1:n, k in 1:n]
 D_L = LowerTriangular(A)
 R = inv(D_L)
 R_bar = R' + R - R' * A * R
+# R_bar should always be symmetric
+issymmetric(R_bar)  # true
+
 T_bar = R_bar * A
+# A*T_bar should always be symmetric
+issymmetric(A*T_bar)  # false
+isapprox(A*T_bar, (A*T_bar)', atol=1e-11) # true
+norm( Symmetric(A*T_bar) - A*T_bar, Inf) #e-17
 
 # -------------------------------------------------------------
 # 1. MODAL COARSE SPACE (First n_c Fourier modes)
@@ -31,28 +38,47 @@ X_modal_full = (I - Π_c_modal) * T_bar # n x n matrix here, acts on the full V,
 
 # Check A-self-adjointness on V: A*X == X'*A
 println("X_modal is A-self-adjoint on V: ", isapprox(A * X_modal_full, X_modal_full' * A, atol=1e-11))
+println("X_modal is A-self-adjoint on V: ", isapprox((A * X_modal_full)', A * X_modal_full, atol=1e-11))
 # not A-self-adjoint -> are we missing something or is it floating point cachotteries ? 
 
 # Restricted operator on H^A using A-orthonormal basis Q_high_A
-Q_high_A = Q_high * inv(sqrt(Λ_high))
-X_modal_H = Q_high_A' * A * X_modal_full * Q_high_A # Euclidean symmetric -> TO DO
-println("X_modal_H is symmetric: ", isapprox(X_modal_H, X_modal_H', atol=1e-11))
+# Q_high_A = Q_high * inv(sqrt(Λ_high))
+# X_modal_H = Q_high_A' * A * X_modal_full * Q_high_A # Euclidean symmetric -> TO DO
+# println("X_modal_H is symmetric: ", isapprox(X_modal_H, X_modal_H', atol=1e-11))
 
-λ_X_modal = sort(real(eigen(X_modal_H).values), rev=true)
+λ_X_modal = sort(real(eigen(X_modal_full).values), rev=true)
 
 # -------------------------------------------------------------
 # 2. XZ-OPTIMAL COARSE SPACE (Smallest eigenmodes of T_bar)
 # -------------------------------------------------------------
-F_Tbar = eigen(T_bar)
-idx_opt = sortperm(real(F_Tbar.values)) # Sort ascending μ_1 <= μ_2 ...
-μ_Tbar = real(F_Tbar.values)[idx_opt]
-Q_Tbar = real(F_Tbar.vectors)[:, idx_opt] # is this one orthogonal ? Ri-orthogonal ? does it matter ?
+# F_Tbar = eigen(Symmetric(T_bar))
+# idx_opt = sortperm(F_Tbar.values) # Sort ascending μ_1 <= μ_2 ...
+# μ_Tbar = F_Tbar.values[idx_opt]
+# Q_Tbar = F_Tbar.vectors[:, idx_opt] # is this one orthogonal ? Ri-orthogonal ? does it matter ?
+
+M = A * R_bar * A
+
+issymmetric(M)  # no
+isapprox(M, M', atol=1e-11) # true
+norm( Symmetric(M) - M, Inf) #e-17
+
+M = Symmetric(M)
+
+# we want to solve R_bar * A * v = λv
+# which is equivalent to A * R_bar * v = λA * v
+F_Tbar = eigen(M, A)
+# returns an A-orthonormal basis V, such that V^T * A * V = I
+
+idx_opt = sortperm(F_Tbar.values) # Sort ascending μ_1 <= μ_2 ...
+μ_Tbar = F_Tbar.values[idx_opt]
+Q_Tbar = F_Tbar.vectors[:, idx_opt] # they are A-orthogonal and not Ri orthogonal: does it matter ?
 
 P_opt = Q_Tbar[:, 1:n_c]
 Π_c_opt = P_opt * inv(P_opt' * A * P_opt) * P_opt' * A
 X_opt_full = (I - Π_c_opt) * T_bar
 
-λ_X_opt_nonzero = sort(filter(x -> x > 1e-8, real(eigen(X_opt_full).values)), rev=true)
+λ_X_opt = sort(real(eigen(X_opt_full).values), rev=true)
+sum(λ_X_opt .> 1e-12) #251 > n_c
 
 # -------------------------------------------------------------
 # 3. GMG LINEAR INTERPOLATION COARSE SPACE
@@ -68,20 +94,19 @@ end
 Π_c_gmg = P_gmg * inv(P_gmg' * A * P_gmg) * P_gmg' * A
 X_gmg_full = (I - Π_c_gmg) * T_bar
 
-λ_X_gmg_nonzero = sort(filter(x -> x > 1e-8, real(eigen(X_gmg_full).values)), rev=true)
+λ_X_gmg = sort(real(eigen(X_gmg_full).values), rev=true)
 
 # -------------------------------------------------------------
 # EXPORT TO CSV
 # -------------------------------------------------------------
-num_high_modes = n - n_c
-k_high_norm = [(n_c + k) / (n + 1) for k in 1:num_high_modes]
+k_high_norm = [(k) / (n + 1) for k in 1:n]
 
 df = DataFrame(
-    k_mode = 1:num_high_modes,
+    k_mode = 1:n,
     k_norm = k_high_norm,
     Modal = λ_X_modal,
-    GMG = λ_X_gmg_nonzero,
-    XZ_Optimal = λ_X_opt_nonzero
+    GMG = λ_X_gmg,
+    XZ_Optimal = λ_X_opt
 )
 
 CSV.write("experiments/data/spectrum_X_GS.csv", df)

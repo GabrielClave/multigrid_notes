@@ -34,21 +34,47 @@ D_L = LowerTriangular(A)
 R_gs = inv(D_L)
 S_gs = I - R_gs*A
 
-# Additive Schwarz (2 overlapping blocks, domain split in two with overlap)
-# Define subdomains covering 1:n_sub1 and n_sub2:n
+# Additive Schwarz
+function build_additive_schwarz(A, d::Int, overlap::Int)
+    n = size(A, 1)
+    @assert d >= 1 "Number of subdomains d must be at least 1."
+    @assert d <= n "Number of subdomains d cannot exceed n."
+
+    # Base size of each non-overlapping partition
+    block_size = div(n, d)
+    
+    # Store subdomains as index ranges
+    subdomains = Vector{UnitRange{Int}}(undef, d)
+    
+    for i in 1:d
+        # Core non-overlapping bounds
+        start_idx = (i - 1) * block_size + 1
+        end_idx = (i == d) ? n : i * block_size  # last domain absorbs remainder
+        
+        # Expand bounds with overlap
+        ov_start = max(1, start_idx - overlap)
+        ov_end = min(n, end_idx + overlap)
+        
+        subdomains[i] = ov_start:ov_end
+    end
+
+    # Build R_as matrix
+    R_as = zeros(eltype(A), n, n)
+    A_mat = Matrix(A)
+
+    for idx in subdomains
+        # Subdomain solver: R_i^T * (A_i)^(-1) * R_i
+        R_as[idx, idx] .+= inv(A_mat[idx, idx])
+    end
+
+    return R_as, subdomains
+end
+
+ndomain = 10
 overlap = 10
-mid = div(n, 2)
-idx1 = 1:(mid + overlap)
-idx2 = (mid - overlap + 1):n
 
-R_as = zeros(n, n)
-A_mat = Matrix(A)
-
-# Additive Schwarz preconditioner: R_AS = R_1^T (A_1)^(-1) R_1 + R_2^T (A_2)^(-1) R_2
-R_as[idx1, idx1] .+= inv(A_mat[idx1, idx1])
-R_as[idx2, idx2] .+= inv(A_mat[idx2, idx2])
-
-S_as = Matrix(I, n, n) - R_as * A_mat
+R_as, _ = build_additive_schwarz(A, ndomain, overlap)
+S_as = I - R_as*A
 
 # functions
 

@@ -13,27 +13,66 @@ k_indices = 1:n
 λ_A = [4.0 * sin(k * π / (2 * (n + 1)))^2 for k in k_indices]
 Q = [sqrt(2 / (n + 1)) * sin(i * k * π / (n + 1)) for i in 1:n, k in 1:n]
 
+# Additive Schwartz
+function build_additive_schwarz(A, d::Int, overlap::Int)
+    n = size(A, 1)
+    @assert d >= 1 "Number of subdomains d must be at least 1."
+    @assert d <= n "Number of subdomains d cannot exceed n."
+
+    # Base size of each non-overlapping partition
+    block_size = div(n, d)
+    
+    # Store subdomains as index ranges
+    subdomains = Vector{UnitRange{Int}}(undef, d)
+    
+    for i in 1:d
+        # Core non-overlapping bounds
+        start_idx = (i - 1) * block_size + 1
+        end_idx = (i == d) ? n : i * block_size  # last domain absorbs remainder
+        
+        # Expand bounds with overlap
+        ov_start = max(1, start_idx - overlap)
+        ov_end = min(n, end_idx + overlap)
+        
+        subdomains[i] = ov_start:ov_end
+    end
+
+    # Build R_as matrix
+    R_as = zeros(eltype(A), n, n)
+    A_mat = Matrix(A)
+
+    for idx in subdomains
+        # Subdomain solver: R_i^T * (A_i)^(-1) * R_i
+        R_as[idx, idx] .+= inv(A_mat[idx, idx])
+    end
+
+    return R_as, subdomains
+end
+
+ndomain = 10
 overlap = 10
-mid = div(n, 2)
-idx1 = 1:(mid + overlap)
-idx2 = (mid - overlap + 1):n
 
-R_as = zeros(n, n)
-A_mat = Matrix(A)
-
-# Additive Schwarz preconditioner: R_AS = R_1^T (A_1)^(-1) R_1 + R_2^T (A_2)^(-1) R_2
-R_as[idx1, idx1] .+= inv(A_mat[idx1, idx1])
-R_as[idx2, idx2] .+= inv(A_mat[idx2, idx2])
+R_as, _ = build_additive_schwarz(A, ndomain, overlap)
 
 S_as = Matrix(I, n, n) - R_as * A_mat
 
 R_bar = R_as' + R_as - R_as' * A * R_as
+# R_bar should always be symmetric
 issymmetric(R_bar)  #no
-isapprox(R_bar', R_bar, atol=1e-11) #I said no
+isapprox(R_bar', R_bar, atol=1e-11) # true
+isapprox(0.5 * (R_bar + R_bar'), R_bar, atol=1e-11) # true
+
+# probably the condition Number: 
+cond(A)
+cond(R_as)
+
+norm( Symmetric(0.5 * (R_bar + R_bar') ) - R_bar, Inf) #e-14
+norm( Symmetric(R_bar) - R_bar, Inf) #e-14
 
 T_bar = R_bar*A
 issymmetric(A*T_bar)  #no
-isapprox(A*T_bar, (A*T_bar)', atol=1e-11) #I said no
+isapprox(A*T_bar, (A*T_bar)', atol=1e-11) # true
+norm( Symmetric(A*T_bar) - A*T_bar, Inf) #e-13
 
 # -------------------------------------------------------------
 # 1. MODAL COARSE SPACE (First n_c Fourier modes)
@@ -56,42 +95,10 @@ println("X_modal_H is symmetric: ", isapprox(X_modal_H, X_modal_H', atol=1e-11))
 
 λ_X_modal = sort(real(eigen(X_modal_H).values), rev=true)
 
-# -------------------------------------------------------------
-# 2. XZ-OPTIMAL COARSE SPACE (Smallest eigenmodes of T_bar)
-# -------------------------------------------------------------
-F_Tbar = eigen(T_bar)
-idx_opt = sortperm(real(F_Tbar.values)) # Sort ascending μ_1 <= μ_2 ...
-μ_Tbar = F_Tbar.values[idx_opt]
-Q_Tbar = F_Tbar.vectors[:, idx_opt] # is this one orthogonal ? Ri-orthogonal ? does it matter ?
-
-rank(Q_Tbar)
-
-P_opt = Q_Tbar[:, 1:n_c]
-
-# Find exact zero columns
-zero_cols = findall(j -> count(!iszero, view(P_opt, :, j)) == 0, axes(P_opt,2))
-
-# Find columns with negligible norm
-col_norms = [norm(view(P_opt, :, j)) for j in axes(P_opt,2)]
-near_zero_cols = findall(col_norms .< 1e-12)
-
-println("Zero columns: ", zero_cols)
-println("Near-zero columns: ", near_zero_cols)
-
-# Numerical rank using SVD tolerance
-r = rank(Matrix(P_opt))
-println("Size of P: $(size(P_opt)), Numerical Rank: $r")
-
-S = svdvals(Matrix(P_opt))
-println("Smallest 5 singular values of P: ", S[end-4:end])
-
-Π_c_opt = P_opt * inv(P_opt' * A * P_opt) * P_opt' * A
-X_opt_full = (I - Π_c_opt) * T_bar
-
-λ_X_opt_nonzero = sort(filter(x -> x > 1e-8, real(eigen(X_opt_full).values)), rev=true)
+λ_X_modal = sort(real(eigen(X_modal_full).values), rev=true)
 
 # -------------------------------------------------------------
-# 3. GMG LINEAR INTERPOLATION COARSE SPACE
+# 2. GMG LINEAR INTERPOLATION COARSE SPACE
 # -------------------------------------------------------------
 P_gmg = zeros(n, n_c)
 for j in 1:n_c
@@ -104,20 +111,57 @@ end
 Π_c_gmg = P_gmg * inv(P_gmg' * A * P_gmg) * P_gmg' * A
 X_gmg_full = (I - Π_c_gmg) * T_bar
 
-λ_X_gmg_nonzero = sort(filter(x -> x > 1e-8, real(eigen(X_gmg_full).values)), rev=true)
+λ_X_gmg = sort(real(eigen(X_gmg_full).values), rev=true)
+
+# -------------------------------------------------------------
+# 3. XZ-OPTIMAL COARSE SPACE (Smallest eigenmodes of T_bar)
+# -------------------------------------------------------------
+
+R_bar = Symmetric(0.5 * (R_bar + R_bar')) # enforce symmetry
+M = A * R_bar * A
+
+issymmetric(M)  # no
+isapprox(M, M', atol=1e-11) # true
+norm( Symmetric(M) - M, Inf) #e-14
+
+M = Symmetric(M)
+
+# we want to solve R_bar * A * v = λv
+# which is equivalent to A * R_bar * A * v = λA * v
+F_Tbar = eigen(M, A)
+# returns an A-orthonormal basis V, such that V^T * A * V = I
+
+idx_opt = sortperm(F_Tbar.values) # Sort ascending μ_1 <= μ_2 ...
+μ_Tbar = F_Tbar.values[idx_opt]
+Q_Tbar = F_Tbar.vectors[:, idx_opt] # A-orthogonal
+
+# in XZ they use a R_bar^-1 orthogonal basis
+# we want to solve R_bar * A * v = λv
+# which is equivalent to A * v = λR_bar^-1 * v
+# so we could use F_Tbar = eigen(A, inv(R_bar))
+
+rank(Q_Tbar) # n
+println("||QT*A*Q - I||: ", norm(Q_Tbar'*A*Q_Tbar - I, Inf)) #e-13
+
+P_opt = Q_Tbar[:, 1:n_c] # optimal range(P)
+
+Π_c_opt = P_opt * inv(P_opt' * A * P_opt) * P_opt' * A
+X_opt_full = (I - Π_c_opt) * T_bar
+
+λ_X_opt = sort(real(eigen(X_opt_full).values), rev=true)
+sum(λ_X_opt .> 1e-12) #235 > n_c
 
 # -------------------------------------------------------------
 # EXPORT TO CSV
 # -------------------------------------------------------------
-num_high_modes = n - n_c
-k_high_norm = [(n_c + k) / (n + 1) for k in 1:num_high_modes]
+k_high_norm = [(n_c + k) / (n + 1) for k in 1:n]
 
 df = DataFrame(
-    k_mode = 1:num_high_modes,
+    k_mode = 1:n,
     k_norm = k_high_norm,
     Modal = λ_X_modal,
-    GMG = λ_X_gmg_nonzero,
-    XZ_Optimal = λ_X_opt_nonzero
+    GMG = λ_X_gmg,
+    XZ_Optimal = λ_X_opt
 )
 
-CSV.write("experiments/data/spectrum_X_GS.csv", df)
+CSV.write("experiments/data/spectrum_X_Schwartz.csv", df)
