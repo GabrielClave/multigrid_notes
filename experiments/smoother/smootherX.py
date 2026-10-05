@@ -11,8 +11,6 @@ import os
 # Eigenvalues of S = I - RA for Jacobi, GS, Schwartz
 # -------------------------------------------------------------
 
-df_raw = pd.read_csv('../data/fourier_attenuation.csv')
-
 # 1. Load the spectrum data
 df_spec_raw = pd.read_csv('../data/smoother_spectrum.csv')
 
@@ -23,7 +21,9 @@ if 'normalized_index' not in df_spec_raw.columns:
 # 2. Reshape from wide to long format
 df_spec_plot = df_spec_raw.melt(
     id_vars=['k', 'normalized_index'],
-    value_vars=['Jacobi', 'WeightedJacobi', 'GaussSeidel', 'AdditiveSchwarz'],
+    # value_vars=['Jacobi', 'WeightedJacobi', 'GaussSeidel', 'AdditiveSchwarz'],
+    value_vars=['Jacobi','Jacobi_true', 'WeightedJacobi','WeightedJacobi_true', 'GaussSeidel', 'AdditiveSchwarz'],
+
     var_name='Smoother',
     value_name='Eigenvalue_Magnitude'
 )
@@ -33,16 +33,20 @@ smoother_labels = {
     'Jacobi': 'Jacobi (ω=1.0)',
     'WeightedJacobi': 'Weighted Jacobi (ω=2/3)',
     'GaussSeidel': 'Gauss-Seidel',
-    'AdditiveSchwarz': 'Additive Schwarz'
+    'AdditiveSchwarz': 'Additive Schwarz',
+    'Jacobi_true': 'Jacobi (predicted)',
+    'WeightedJacobi_true': 'Weighted Jacobi (ω=2/3, predicted)',
 }
 df_spec_plot['Smoother'] = df_spec_plot['Smoother'].map(smoother_labels)
 
 # 3. Custom color palette matching the previous plot
 colors = {
     'Jacobi (ω=1.0)': '#e76f51',              # Terracotta
-    'WeightedJacobi (ω=2/3)': '#f4a261',       # Amber / Sandy
+    'Weighted Jacobi (ω=2/3)': '#f4a261',       # Amber / Sandy
     'Gauss-Seidel': '#2a9d8f',                 # Teal
-    'Additive Schwarz': '#264653'   # Dark slate
+    'Additive Schwarz': '#264653',   # Dark slate
+    'Jacobi (predicted)': "#99A2AC",
+    'Weighted Jacobi (ω=2/3, predicted)': "#C298BC",
 }
 
 # 4. Generate plot
@@ -54,9 +58,9 @@ plot_spec = (
     + geom_hline(yintercept=1.0, linetype='dashed', color="#4e4774", size=0.8) # Convergence boundary |λ| = 1
     + scale_color_manual(values=colors)
     + labs(
-        x='Normalized Eigenvalue Index (i / n)',
+        x='Normalized Eigenvalue Index',
         y='Eigenvalue Magnitude |λ(S)|',
-        title='Smoother Spectrum (Sorted Eigenvalue Magnitudes)',
+        title='Spectrum of S = ( I - RA) (Sorted Eigenvalue Magnitudes)',
         subtitle=f'1D Laplacian | n = {n}'
     )
     + theme_minimal()
@@ -73,6 +77,8 @@ plot_spec
 # -------------------------------------------------------------
 # Attenuation factor ||Se|| of S = I - RA for Jacobi, GS, Schwartz
 # -------------------------------------------------------------
+
+df_raw = pd.read_csv('../data/fourier_attenuation.csv')
 
 # 2. Reshape from wide to long format for plotnine
 df_plot = df_raw.melt(
@@ -132,6 +138,214 @@ plot = (
 plot
 
 # -------------------------------------------------------------
+# Eigenvalues of S_bar = I - R_bar A for Jacobi, GS, Schwartz
+# -------------------------------------------------------------
+
+# 1. Load the spectrum data
+df_raw = pd.read_csv('../data/smoother_S_spectrum.csv')
+
+# Normalize the index axis to [0, 1] for scale invariance
+if 'normalized_index' not in df_raw.columns:
+    df_raw['normalized_index'] = df_raw['k'] / df_raw['k'].max()
+
+# 2. Reshape from wide to long format
+df_plot = df_raw.melt(
+    id_vars=['k', 'normalized_index'],
+    value_vars=['Jacobi', 'WeightedJacobi', 'GaussSeidel', 'AdditiveSchwarz'],
+    var_name='Smoother',
+    value_name='Eigenvalue_Magnitude'
+)
+
+# Clean up display names
+smoother_labels = {
+    'Jacobi': 'Jacobi (ω=1.0)',
+    'WeightedJacobi': 'Weighted Jacobi (ω=2/3)',
+    'GaussSeidel': 'Gauss-Seidel',
+    'AdditiveSchwarz': 'Additive Schwarz'
+}
+df_plot['Smoother'] = df_plot['Smoother'].map(smoother_labels)
+
+# 3. Custom color palette matching the previous plot
+colors = {
+    'Jacobi (ω=1.0)': '#e76f51',              # Terracotta
+    'Weighted Jacobi (ω=2/3)': '#f4a261',       # Amber / Sandy
+    'Gauss-Seidel': '#2a9d8f',                 # Teal
+    'Additive Schwarz': '#264653'   # Dark slate
+}
+
+# 4. Generate plot
+n = len(df_raw)
+
+plot = (
+    ggplot(df_plot, aes(x='normalized_index', y='Eigenvalue_Magnitude', color='Smoother'))
+    + geom_line(size=1.1, alpha=0.85)
+    + geom_hline(yintercept=1.0, linetype='dashed', color="#4e4774", size=0.8) # Convergence boundary |λ| = 1
+    + scale_color_manual(values=colors)
+    + labs(
+        x='Normalized Eigenvalue Index',
+        y='Eigenvalue Magnitude |λ(S)|',
+        title='Spectrum of S_bar = ( I - R_bar A) (Sorted Eigenvalue Magnitudes)',
+        subtitle=f'1D Laplacian | n = {n}'
+    )
+    + theme_minimal()
+    + theme(
+        figure_size=(9, 5),
+        legend_position='right',
+        # legend_title=theme(text='Smoother Type'),
+    )
+)
+
+# Display or save plot
+plot
+
+# -------------------------------------------------------------
+# Eigenvalues of X = (I - Pi_c) R_bar A for Jacobi, GS, Schwartz
+# -------------------------------------------------------------
+
+# 1. Load the spectrum data
+df_raw = pd.read_csv('../data/smoother_X_spectrum.csv')
+
+# Normalize the index axis to [0, 1] for scale invariance
+if 'normalized_index' not in df_raw.columns:
+    df_raw['normalized_index'] = df_raw['k'] / df_raw['k'].max()
+
+# 2. Reshape from wide to long format
+df_plot = df_raw.melt(
+    id_vars=['k', 'normalized_index'],
+    value_vars=['Jacobi', 'WeightedJacobi', 'GaussSeidel', 'AdditiveSchwarz'],
+    var_name='Smoother',
+    value_name='Eigenvalue_Magnitude'
+)
+
+# Clean up display names
+smoother_labels = {
+    'Jacobi': 'Jacobi (ω=1.0)',
+    'WeightedJacobi': 'Weighted Jacobi (ω=2/3)',
+    'GaussSeidel': 'Gauss-Seidel',
+    'AdditiveSchwarz': 'Additive Schwarz'
+}
+df_plot['Smoother'] = df_plot['Smoother'].map(smoother_labels)
+
+# 3. Custom color palette matching the previous plot
+colors = {
+    'Jacobi (ω=1.0)': '#e76f51',              # Terracotta
+    'Weighted Jacobi (ω=2/3)': '#f4a261',       # Amber / Sandy
+    'Gauss-Seidel': '#2a9d8f',                 # Teal
+    'Additive Schwarz': '#264653'   # Dark slate
+}
+
+# 4. Generate plot
+n = len(df_raw)
+
+plot = (
+    ggplot(df_plot, aes(x='normalized_index', y='Eigenvalue_Magnitude', color='Smoother'))
+    + geom_line(size=1.1, alpha=0.85)
+    + geom_hline(yintercept=1.0, linetype='dashed', color="#4e4774", size=0.8) # Convergence boundary |λ| = 1
+    + scale_color_manual(values=colors)
+    + labs(
+        x='Normalized Eigenvalue Index',
+        y='Eigenvalue Magnitude |λ(S)|',
+        title='Spectrum of X with linear interpolation P (Sorted Eigenvalue Magnitudes)',
+        subtitle=f'1D Laplacian | dim(H) = n - n_c = {n}'
+    )
+    + theme_minimal()
+    + theme(
+        figure_size=(9, 5),
+        legend_position='right',
+        # legend_title=theme(text='Smoother Type'),
+    )
+)
+
+# Display or save plot
+plot
+
+# -------------------------------------------------------------
+# Eigenvalues of optimal X = (I - Pi_c_optimal) R_bar A for Jacobi, GS, Schwartz
+# -------------------------------------------------------------
+
+# 1. Load the spectrum data
+df_raw = pd.read_csv('../data/smoother_X_opt_spectrum.csv')
+
+# Normalize the index axis to [0, 1] for scale invariance
+if 'normalized_index' not in df_raw.columns:
+    df_raw['normalized_index'] = df_raw['k'] / df_raw['k'].max()
+
+# 2. Reshape from wide to long format
+df_plot = df_raw.melt(
+    id_vars=['k', 'normalized_index'],
+    # value_vars=['Jacobi', 'WeightedJacobi', 'GaussSeidel', 'AdditiveSchwarz'],
+    value_vars=['Jacobi','Jacobi_true', 'WeightedJacobi','WeightedJacobi_true', 'GaussSeidel', 'AdditiveSchwarz'],
+    var_name='Smoother',
+    value_name='Eigenvalue_Magnitude'
+)
+
+# Clean up display names
+smoother_labels = {
+    'Jacobi': 'Jacobi (ω=1.0)',
+    'WeightedJacobi': 'Weighted Jacobi (ω=2/3)',
+    'GaussSeidel': 'Gauss-Seidel',
+    'AdditiveSchwarz': 'Additive Schwarz',
+    'Jacobi_true': 'Jacobi (predicted)',
+    'WeightedJacobi_true': 'Weighted Jacobi (ω=2/3, predicted)',
+}
+
+drawing_order = [
+    'Jacobi (predicted)',
+    'Jacobi (ω=1.0)',
+    'Weighted Jacobi (ω=2/3, predicted)',
+    'Weighted Jacobi (ω=2/3)',
+    'Gauss-Seidel',
+    'Additive Schwarz'  # Plotted last -> rendered on top
+]
+
+# 2. Map labels
+df_plot['Smoother'] = df_plot['Smoother'].map(smoother_labels)
+
+# 3. Convert to Categorical and sort the DataFrame rows
+df_plot['Smoother'] = pd.Categorical(
+    df_plot['Smoother'], 
+    categories=drawing_order, 
+    ordered=True
+)
+df_plot = df_plot.sort_values('Smoother')
+
+# 3. Custom color palette matching the previous plot
+colors = {
+    'Jacobi (ω=1.0)': '#e76f51',              # Terracotta
+    'Weighted Jacobi (ω=2/3)': '#f4a261',       # Amber / Sandy
+    'Gauss-Seidel': '#2a9d8f',                 # Teal
+    'Additive Schwarz': '#264653',   # Dark slate
+    'Jacobi (predicted)': "#99A2AC",
+    'Weighted Jacobi (ω=2/3, predicted)': "#71777E",
+}
+
+# 4. Generate plot
+n = len(df_raw)
+
+plot = (
+    ggplot(df_plot, aes(x='normalized_index', y='Eigenvalue_Magnitude', color='Smoother'))
+    + geom_line(size=1.1, alpha=0.85)
+    + geom_hline(yintercept=1.0, linetype='dashed', color="#4e4774", size=0.8) # Convergence boundary |λ| = 1
+    + scale_color_manual(values=colors)
+    + labs(
+        x='Normalized Eigenvalue Index',
+        y='Eigenvalue Magnitude |λ(S)|',
+        title='Spectrum of X with optimal interpolation P (Sorted Eigenvalue Magnitudes)',
+        subtitle=f'1D Laplacian | dim(H) = n - n_c = {n}'
+    )
+    + theme_minimal()
+    + theme(
+        figure_size=(9, 5),
+        legend_position='right',
+        # legend_title=theme(text='Smoother Type'),
+    )
+)
+
+# Display or save plot
+plot
+
+
+# -------------------------------------------------------------
 # Eigenvalue of X for Jacobi
 # -------------------------------------------------------------
 
@@ -171,53 +385,53 @@ colors = {
     'X = T_bar(I - Pi_c)': '#3d405b'   # Dark slate
 }
 
-# -------------------------------------------------------------
-# Eigenvalue of X for GS
-# -------------------------------------------------------------
+# # -------------------------------------------------------------
+# # Eigenvalue of X for GS
+# # -------------------------------------------------------------
 
-# Load spectrum data generated by Julia
-df_raw = pd.read_csv('../data/spectrum_X_GS.csv')
+# # Load spectrum data generated by Julia
+# df_raw = pd.read_csv('../data/spectrum_X_GS.csv')
 
-n = df_raw.shape[0]      # Grid size / total modes
-n_c = 250                 # Number of coarse modes kept
-k_c = (n_c + 1) / (n + 1)
+# n = df_raw.shape[0]      # Grid size / total modes
+# n_c = 250                 # Number of coarse modes kept
+# k_c = (n_c + 1) / (n + 1)
 
-# Melt DataFrame for plotnine grouped representation
-df_plot = pd.melt(
-    df_raw,
-    id_vars=['k_mode', 'k_norm'],
-    value_vars=['Modal', 'GMG', 'XZ_Optimal'],
-    var_name='Coarse_Space',
-    value_name='Eigenvalue'
-)
+# # Melt DataFrame for plotnine grouped representation
+# df_plot = pd.melt(
+#     df_raw,
+#     id_vars=['k_mode', 'k_norm'],
+#     value_vars=['Modal', 'GMG', 'XZ_Optimal'],
+#     var_name='Coarse_Space',
+#     value_name='Eigenvalue'
+# )
 
-# Color palette for coarse spaces
-colors = {
-    'Modal': '#e76f51',       # Coral / Terracotta
-    'GMG': '#2a9d8f',         # Teal
-    'XZ_Optimal': '#264653'   # Dark slate
-}
+# # Color palette for coarse spaces
+# colors = {
+#     'Modal': '#e76f51',       # Coral / Terracotta
+#     'GMG': '#2a9d8f',         # Teal
+#     'XZ_Optimal': '#264653'   # Dark slate
+# }
 
-# Plot restricted spectrum on H^A
-plot = (
-    ggplot(df_plot, aes(x='k_norm', y='Eigenvalue', color='Coarse_Space'))
-    # + geom_line(size=1.1)
-    + geom_point(size = 0.7, alpha=0.8)
-    + geom_vline(xintercept=k_c, linetype='dashed', color='#8d99ae', size=0.8)
-    + scale_color_manual(values=colors)
-    + labs(
-        x='Normalized Frequency Mode',
-        y='Eigenvalue Magnitude λ(X)',
-        title='Restricted Spectrum of Two-Grid Operator X on H',
-        subtitle=f'Gauss-Seidel Smoother | n = {n}, n_c = {n_c}'
-    )
-    + theme_minimal()
-    + theme(
-        figure_size=(9, 5),
-        legend_position='right',
-    )
-)
+# # Plot restricted spectrum on H^A
+# plot = (
+#     ggplot(df_plot, aes(x='k_norm', y='Eigenvalue', color='Coarse_Space'))
+#     # + geom_line(size=1.1)
+#     + geom_point(size = 0.7, alpha=0.8)
+#     + geom_vline(xintercept=k_c, linetype='dashed', color='#8d99ae', size=0.8)
+#     + scale_color_manual(values=colors)
+#     + labs(
+#         x='Normalized Frequency Mode',
+#         y='Eigenvalue Magnitude λ(X)',
+#         title='Restricted Spectrum of Two-Grid Operator X on H',
+#         subtitle=f'Gauss-Seidel Smoother | n = {n}, n_c = {n_c}'
+#     )
+#     + theme_minimal()
+#     + theme(
+#         figure_size=(9, 5),
+#         legend_position='right',
+#     )
+# )
 
-# Save or show plot
-# plot.save('spectrum_X_comparison.png', dpi=300)
-plot
+# # Save or show plot
+# # plot.save('spectrum_X_comparison.png', dpi=300)
+# plot
