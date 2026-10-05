@@ -29,6 +29,7 @@
 #let lm = $lambda_max$
 #let lk = $lambda_k$
 #let lmin = $lambda_min$
+#let tb(x) = $tilde(bold(#x))$
 
 // Document Title & Metadata
 #align(center)[
@@ -75,12 +76,31 @@ It is a linear operator $R : V' arrow.r.long V$ that can be used to solve (equat
 $
   v^((k+1)) = v^((k)) + R(f - A v^((k)))
 $
-with associated error propagation operator
+
+The effect of the smoother on any error $e in V$ is given by $S e = (I - R A)e$\
+
+// when $R$ is not symmetric, $S$ is not symmetric either:
 $
-  S = I - R A
+  ||S e||_A^2 &= ((I - R A) e, (I - R A) e)_A \
+  &= ((I - R A)^*(I - R A) e, e)_A \
 $
 
-If $R$ is not symmetric, it can be symmetrized through the iteration:
+$(I - R A)^*$ the adjoint of $(I - R A)$ with respect to A:
+$
+ (I - R A)^* &= A^(-1)(I - R A)^T A\
+ & = (I - R^T A)
+$
+which correspond to the error propagation operator of the smoother $R^T$.
+
+we have:
+$
+ (I - R^T A)(I - R A) &= I - (R + R^T - R^T A R)A  \
+  &= I - Rb A \
+  "with" Rb = R& + R^T - R^T A R
+$
+$Rb$ is a symmetric operator, acting as a symmetrized version of the smoother. \
+$Rb$ is equivalent to applying the smoother $R$ then its transpose $R^T$:
+
 $
 cases(
   u^(m - 1/2) &= u^(m - 1) + R(f - A u^(m - 1)),
@@ -88,21 +108,13 @@ cases(
 )
 $
 
-which consist of applying $R$ first followed by $R'$, and is equivalent to applying $Rb$, where 
-$ Rb = R' + R - R' A R, $
-
-which satisfies
-$ I - Rb A = (I - R A)^*(I - R A). \
-(R A)^* = R' A
-$
-
-with associated
+with associated error propagation operator
 $
   overline(S) = I - Rb A \
 $
 
-The symmetrized iteration converges if $rho(overline(S)) <1$,\
-which implies $||S||_A = sqrt(rho(overline(S))) <1$ and so regular iteration is also convergent.
+// The symmetrized iteration converges if $rho(overline(S)) <1$,\
+// which implies $||S||_A = sqrt(rho(overline(S))) <1$ and so regular iteration is also convergent.
 
 === A multigrid smoother
 
@@ -346,7 +358,7 @@ $
   &= 1 - min_(w in W) ((Rb A (I - Pi_c) w, (I - Pi_c) w)_A) / (||w||_A^2) \
   &= 1 - min_(w in W) ((Rb A (I - Pi_c) w, (I - Pi_c) w)_A) / (||(I - Pi_c) w||_A^2 + ||Pi_c w||_A^2) \
   &= 1 - min_(v in H^A) (( Rb A v, v)_A) / (||v||_A^2) \
-  &= 1 - min_(v in H^A) (((I - Pi_c) Q_W Rb A v, v)_A) / (||v||_A^2) \
+  &= 1 - min_(v in H^A) (((I - Pi_c) Rb A v, v)_A) / (||v||_A^2) \
   &= 1 - lambda_(min)(X),
 $
 
@@ -360,81 +372,82 @@ $
   ((Rb A (I - Pi_c) w, (I - Pi_c) w)_A) / (||w||_A^2) = ((Rb A (I - Pi_c) w, (I - Pi_c) w)_A) / (||(I - Pi_c) w||_A^2 + ||Pi_c w||_A^2)
 $
 
-$Rb A (I - Pi_c) w in range(Tb) = W$ so it is unchanged by $Q_W$ \
+// $Rb A (I - Pi_c) w in range(Tb) = W$ so it is unchanged by $Q_W$ \
 $||w||_A^2 = ||(I - Pi_c) w||_A^2 + ||Pi_c w||_A^2$ using the orthogonal decomposition of W
 
 #v(1cm)
 
 $
-  (Q_W Rb A v, v)_A = ((I-Pi_c) Rb A v, v)_A
+  (Rb A v, v)_A = ((I-Pi_c) Rb A v, v)_A
 $
-
+// can probably be expressed more cleanly using the orthogonal decomposition
 $Rb A v in range(Rb A) = W$, so it is composed of some part along $W_P$ that will vanish when applying the scalar product with $v in H^A perp W_P$: \
-$ forall w in W, v in H^A, quad(w,v)_A = ((I-Pi_c)w,v)_A $
+$ forall w in W, v in H^A, quad(w,v)_A &= ((I-Pi_c)w,v)_A + (Pi_c w,v)_A \
+&= ((I-Pi_c)w,v)_A + 0 $
 
-#align(center)[
-  #cetz.canvas({
-    import cetz.draw: *
+// #align(center)[
+//   #cetz.canvas({
+//     import cetz.draw: *
 
-    let circle_radius = 0.06
-    let main-purple = rgb("#7570b3")
-    let red-accent  = rgb("#e04040")
-    let green-accent = rgb("#1b9e77")
+//     let circle_radius = 0.06
+//     let main-purple = rgb("#7570b3")
+//     let red-accent  = rgb("#e04040")
+//     let green-accent = rgb("#1b9e77")
 
-    // Coordinates
-    let orig = (0, 0)
-    let w-pt = (3.5, 3.2)           // Vector w in W
-    let w-P = (3.5, 0)             // Projection onto W_P (Pi_c w)
-    let w-H = (0, 3.2)             // Projection onto W_P^\perp_A ((I - Pi_c) w)
-    let v-P = (5, 0)             // Test vector v_P in W_P
+//     // Coordinates
+//     let orig = (0, 0)
+//     let w-pt = (3.5, 3.2)           // Vector w in W
+//     let w-P = (3.5, 0)             // Projection onto W_P (Pi_c w)
+//     let w-H = (0, 3.2)             // Projection onto W_P^\perp_A ((I - Pi_c) w)
+//     let v-P = (5, 0)             // Test vector v_P in W_P
 
-    // Axes
-    line((-0.5, 0), (5.5, 0), stroke: 1pt, name: "x-axis")
-    line((0, -0.5), (0, 4.2), stroke: 1pt, name: "y-axis")
+//     // Axes
+//     line((-0.5, 0), (5.5, 0), stroke: 1pt, name: "x-axis")
+//     line((0, -0.5), (0, 4.2), stroke: 1pt, name: "y-axis")
 
-    content((5.6, 0), $W_P$, anchor: "west")
-    content((0, 4.3), $W_P^perp_A$, anchor: "south")
+//     content((5.6, 0), $W_P$, anchor: "west")
+//     content((0, 4.3), $W_P^perp_A$, anchor: "south")
 
-    // --- DECOMPOSITION OF w ---
-    // Dashed projection lines for w
-    line(w-pt, w-H, stroke: (dash: "dashed", paint: gray))
-    line(w-pt, w-P, stroke: (dash: "dashed", paint: gray))
+//     // --- DECOMPOSITION OF w ---
+//     // Dashed projection lines for w
+//     line(w-pt, w-H, stroke: (dash: "dashed", paint: gray))
+//     line(w-pt, w-P, stroke: (dash: "dashed", paint: gray))
 
-    // Vector w
-    line(
-      orig, w-pt,
-      mark: (end: "triangle", fill: main-purple),
-      stroke: (paint: main-purple, thickness: 1.5pt)
-    )
-    circle(w-pt, radius: circle_radius, fill: black, stroke: none)
-    content(w-pt, padding: 0.15, $w$, anchor: "south-west")
+//     // Vector w
+//     line(
+//       orig, w-pt,
+//       mark: (end: "triangle", fill: main-purple),
+//       stroke: (paint: main-purple, thickness: 1.5pt)
+//     )
+//     circle(w-pt, radius: circle_radius, fill: black, stroke: none)
+//     content(w-pt, padding: 0.15, $w$, anchor: "south-west")
 
-    // Component w_H = (I - Pi_c)w on y-axis
-    content(w-H, padding: 0.15, $w_H$, anchor: "east")
+//     // Component w_H = (I - Pi_c)w on y-axis
+//     content(w-H, padding: 0.15, $w_H$, anchor: "east")
 
-    // Component w_P = Pi_c w on x-axis
-    content(w-P, padding: 0.15, $w_P$, anchor: "north")
+//     // Component w_P = Pi_c w on x-axis
+//     content(w-P, padding: 0.15, $w_P$, anchor: "north")
 
-    // --- TEST VECTOR v_P AND PRODUCT EQUIVALENCE ---
-    // Vector v_P along W_P
-    line(
-      orig, v-P,
-      mark: (end: "triangle", fill: green-accent),
-      stroke: (paint: green-accent, thickness: 1.5pt),
-      name: "v_vector"
-    )
-    content(v-P, padding: 0.15, $v_P$, anchor: "north")
+//     // --- TEST VECTOR v_P AND PRODUCT EQUIVALENCE ---
+//     // Vector v_P along W_P
+//     line(
+//       orig, v-P,
+//       mark: (end: "triangle", fill: green-accent),
+//       stroke: (paint: green-accent, thickness: 1.5pt),
+//       name: "v_vector"
+//     )
+//     content(v-P, padding: 0.15, $v_P$, anchor: "north")
 
-    // Annotation for inner product equality
-    content(
-      (rel: (-2, 0.25), to: "v_vector.mid") ,
-      text(size: 8.5pt)[
-        $(w, v_P)_A = (w_P, v_P)_A$
-      ],
-      anchor: "west"
-    )
-  })
-]
+//     // Annotation for inner product equality
+//     content(
+//       (rel: (-2, 0.25), to: "v_vector.mid") ,
+//       text(size: 8.5pt)[
+//         $(w, v_P)_A = (w_P, v_P)_A$
+//       ],
+//       anchor: "west"
+//     )
+//   })
+// ]
 
 #v(1cm)
 
@@ -445,10 +458,11 @@ $
 $
 
 X is self-adjoint with respect to $(dot, dot)_A$, as $I-Pi_c$ is an $A$-orthogonal projection and $Rb$ is SPD.\
-The $Q_W$ projection is redundant here as in our setting $im(Tb) = W$
+// The $Q_W$ projection is redundant here as in our setting $im(Tb) = W$
 
 X represents the effect of the (symmetrized) smoother on the non-smooth errors.
 
+// this one is weird
 Let $H^A = range(P)^(perp_A)$ be the space of these high frequency errors.\
 We have $H^A = W_P^(perp_A) inter W$, and the effect of the two-grids cycle on $e in H$ is:
 $
@@ -481,7 +495,7 @@ if X has a small eigenvalue, the associated direction in H will escape both the 
     let e-pt = (4.5, 3.5)          // Initial error vector e
     let e-H = (0, 3.5)            // High-frequency component e_H
     let e-P = (4.5, 0)            // Coarse-space component e_P
-    let e-smoothed = (3, 0.9)   // Error after smoother: (I - T_bar) e
+    let e-smoothed = (3, 0.9)   // Error after smoother: (I - Tb) e
     let e-H-smoothed = (0, 0.9) // Reduced high-frequency component (I - X) e_H
     let e-P-smoothed = (3, 0) // Slightly reduced coarse component
 
@@ -503,12 +517,12 @@ if X has a small eigenvalue, the associated direction in H will escape both the 
     // circle(e-P, radius: 0.06, fill: blue, stroke: none)
     content(e-P, padding: 0.15, $e_P$, anchor: "north")
 
-    // --- STATE AFTER SMOOTHER (I - T_bar)e ---
+    // --- STATE AFTER SMOOTHER (I - Tb)e ---
     // Dashed projection lines for smoothed error
     line(e-smoothed, e-H-smoothed, stroke: (dash: "dashed", paint: gray))
     line(e-smoothed, e-P-smoothed, stroke: (dash: "dashed", paint: gray))
 
-    // Vector (I - T_bar)e
+    // Vector (I - Tb)e
     line(e-pt, e-smoothed, mark: (end: "triangle", fill: main-purple), stroke: (paint: main-purple, thickness: 1.5pt)) // effect of smoother
     circle(e-smoothed, radius: 0.06, fill: black, stroke: none)
     content(e-smoothed, padding: 0.15, $(I - Tb)e$, anchor: "south-east")
@@ -746,8 +760,8 @@ $
 $
 for $omega = 2/3$,
 $
-  S = I - 1/3 A \
-  Rb = R^T + R - R^T A R = R(I - A R) = 1/3(2 I - 1/3 A)  
+  R = 1/3 I, quad S = I - 1/3 A \
+  Rb = R^T + R - R^T A R = R(2 I - A R) = 1/3(2 I - 1/3 A)  
 $
 $A, R, S "and" Rb A$ share the same eigenvectors:
 $
@@ -790,11 +804,11 @@ $ X = U mat(
 ) U^T quad X: V arrow V $
 
 So 
-$ X = U_H mat(
+$ X|_H = U_H mat(
    lambda_(n_c + 1)(Tb), , ;
    dots.down , ;
    quad quad quad quad lambda_n (Tb)
-) U_H^T quad X: H^A arrow H^A, quad U_H = U[ n_c + 1 : n] $
+) U_H^T quad X|_H: H^A arrow H^A, quad U_H = U[ n_c + 1 : n] $
 
 The two grid convergence is governed by
 $
@@ -802,3 +816,94 @@ $
 &= lambda_(n_c + 1)(Tb)\
 &= 1 - 1/3lambda_(n_c + 1)(A)(2 - 1/3lambda_(n_c + 1)(A))
 $
+
+=== Gauss-Seidel and Additive Schwartz
+
+Here $R$ is no longer symmetric, and we do not have a simple expression for $Rb "or" Tb$.
+
+We can compute the eigenvalues of $S = I - R A$ and $X$ directly for small values of $n$.
+
+// add figures later
+
+The optimal coarse space is no longer composed of eigenvectors of A.\
+To compute the orthogonal diagonalisation of $Tb$, we can note that the problem is equivalent to:
+$
+  Tb v = lambda v arrow.double.l.r & A Rb A v = lambda A v \
+  arrow.double.l.r & M v = lambda A v \
+$
+
+$M$ is symmetric, we solve the generalized eigenproblem $M v = lambda A v$ for symmetric M and A, \ 
+and we get an A-orthogonal basis:
+
+$
+  M v = lambda A v   arrow.double.l.r & (L^(-1) M L^(-T)) L^T v = lambda L^(-1) L L^T v quad, quad A = L L^T \
+  arrow.double.l.r & tilde(M) w = lambda w \
+$
+
+Solving $tilde(M) w = lambda w$ yields an orthonormal basis $W = L^T V$,\
+such that $W^T W = I arrow.double V^T L L^T V = I => V^T A V = I$
+
+which we note is equivalent to getting an $Rb^(-1)$-orthonormal basis since:
+$
+  Tb v = lambda v & arrow.double.long Rb A v = lambda v \
+  & arrow.double.long A v = lambda Rb^(-1) v
+$
+Solving $A v = lambda Rb^(-1) v$ yields a $Rb^(-1)$-orthonormal basis $V^T Rb^(-1) V = I$.
+
+Furthermore, $Tb = Rb A$ is self-adjoint with respect to both the $A$-inner product and the $Rb^(-1)$-inner product:
+$
+  ( Tb x, y )_A &= x^T A (Rb A y) = x^T A Rb A y = ( x, Tb y )_A \
+  ( Tb x, y )_(Rb^(-1)) &= x^T Rb^(-1) (Rb A y) = x^T A y = ( x, Tb y )_(Rb^(-1))
+$
+// both formulations generate the same optimal eigenspaces $V_(n_c) = "span"(v_1, ..., v_(n_c))$. ?
+
+= Personal notes
+
+== Matrix representation of X
+
+$ X|_V = (I - Pi_c)Rb A : V arrow V$ is A-self adjoint\
+Its matrix representation is $tilde(X)|_V in MM_(n times n)(RR)$
+
+what is the matrix representation of $X : H arrow H$ ?
+
+let $Q in RR^(n times n)$ be an A-orthonormal basis of V, $Q_H$ be an orthogonal basis of H 
+$
+ Q^T A Q = I\
+ Q = mat(q_1 | dots | q_n) \
+ Q_H = mat(q_(n_c+1) | dots | q_n) \
+$
+
+In operator form, 
+
+$
+ v in H subset V, quad v = sum_(i = n_c + 1)^(n)v_i bold(q_i) = Q_H tb(v) quad tb(v) in RR^(n-n_c)
+$
+$w = X v$ is well defined and $w in H$
+$
+  w = X v &= sum_(i = n_c + 1)^(n)(I - Pi_c)Rb A v_i bold(q_i) \
+  & = Q_H tb(w) quad tb(w) in RR^(n-n_c)
+$
+$
+  w_j &= ( bold(q_j) , X v)_A 
+$
+and we have:
+$
+  w = X v &arrow.double Q_H tb(w) = X Q_H tb(v) \
+  &arrow.double tb(w) = Q_H^T A X Q_H tb(v)\
+  &arrow.double tb(w) = tilde(X) tb(v)\
+$
+$ tilde(X) = Q_H^T A (I - Pi_c)Rb A Q_H in RR^((n-n_c) times (n-n_c))$ is the matrix representation of X (in the euclidean basis ? $Q_H$ ?)
+noting that $tilde(X)$ is symmetric (X isn't)
+
+In numerical application, if we have an euclidean orthonormal basis $U$ of eigenvectors of $A$ SPD:
+$
+  A = U D U^T, quad U^T U = I\
+  A = H^2, quad H = U D^(1/2) U^T
+$
+
+we have
+$
+  U^T U = I &arrow.double U^T H^(-1) A H^(-1) U = I\
+  &arrow.double (H^(-1) U)^T A (H^(-1) U) = I\
+$
+a valid $Q$ is $Q = H^(-1) U = U D^(-1/2)$
