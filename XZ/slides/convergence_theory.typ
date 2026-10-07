@@ -38,6 +38,14 @@
 
 = Multigrid recap
 
+== Core idea (picture)
+
+#align(center)[
+  #only("1")[#fig-amg(step: 1)]
+  #only("2")[#fig-amg(step: 2)]
+  #only("3")[#fig-amg(step: 3)]
+]
+
 == Core idea (text)
 
 A multigrid solver relies on three core ingredients:
@@ -51,16 +59,6 @@ The central objective when designing a multigrid method is to construct $P$ and 
 $ V approx range(P) xor_A H $
 
 Ensuring that error components missed by the smoother are effectively captured and eliminated by the coarse grid correction.
-
-== Core idea (picture)
-
-
-#align(center)[
-  #only("1")[#fig-amg(step: 1)]
-  #only("2")[#fig-amg(step: 2)]
-  #only("3")[#fig-amg(step: 3)]
-]
-
 
 == Some notations (smoothers)
 The first component of a multigrid solver is a smoother.\
@@ -242,11 +240,11 @@ We decompose the space into high and low frequency errors:
 
 = Subspace Correction Theory
 
-== The promise 
+// == The promise 
 
-- "In this paper, we try to develop a *unified framework* and theory that can be used to derive and analyze different algebraic multigrid methods in a coherent manner."
+// - "In this paper, we try to develop a *unified framework* and theory that can be used to derive and analyze different algebraic multigrid methods in a coherent manner."
 
-- "Our theory applies to *most existing multigrid methods*, including the standard geometric multigrid method, the classic AMG, energy-minimization AMG, unsmoothed and smoothed aggregation AMG, and spectral AMGe."
+// - "Our theory applies to *most existing multigrid methods*, including the standard geometric multigrid method, the classic AMG, energy-minimization AMG, unsmoothed and smoothed aggregation AMG, and spectral AMGe."
 // and they develop these method in their framework
 
 // - they allegedly developed a unified theory ("subspace correction methods") applicable for domain decomposition and multigrid
@@ -257,20 +255,20 @@ We decompose the space into high and low frequency errors:
   #fig-smoother-error
 ]
 
-#pagebreak()
+// #pagebreak()
 
-The vector $(I - Pi_c)(I - R A)e_H$ represents the residual error on $H$.
+// The vector $(I - Pi_c)(I - R A)e$ represents the residual error on $H$.
 
-The smaller $||(I - Pi_c)(I - R A)e_H||$ the better.
+// The smaller $||(I - Pi_c)(I - R A)e||$ the better.
 
-#v(1cm)
+// #v(1cm)
 
 // Informally, let's assume that $(I - R A)e_H in H$,\ meaning $(I - Pi_c)(I - R A)e_H = (I - R A)e_H$ \ 
 // and let's assume that $R A$ is "symmetric".
 
 // For a normalized error $||e_H|| = 1$, the maximum error is bounded by:
 
-$ sup_(e_H in H \ ||e_H|| = 1) ||(I - R A)e_H|| = lm(I - R A) = 1 - lmin(R A) $
+// $ sup_(e_H in H \ ||e_H|| = 1) ||(I - R A)e_H|| = lm(I - R A) = 1 - lmin(R A) $
 // sup_(e_H in H \ ||e_H||_A = 1)||S e_H||
 
 // == Two-Grids Operator
@@ -310,15 +308,28 @@ $(I - R A)^*$ the adjoint of $(I - R A)$ with respect to A: $(I - R A)^* = (I - 
     Rb A "is A-self adjoint:" quad (Rb A)^* = Rb A
   $
 ]
+
 #pagebreak()
 
+== Smoother convergence
 $
-  ||S||_A^2 &= max_(e in H) (||S e||_A^2) / (||e||_A^2) \
-  #uncover("2-")[$&= max_(e in H) ((I - R A) e, (I - R A) e)_A / ((e,e)_A)$] \
-  #uncover("3-")[$&= max_(e in H) (((I - Rb A)e,e)_A) / ((e,e)_A)$] \
+  ||S||_A^2 &= max_(e in V) (||S e||_A^2) / (||e||_A^2) \
+  #uncover("2-")[$&= max_(e in V) ((I - R A) e, (I - R A) e)_A / ((e,e)_A)$] \
+  #uncover("3-")[$&= max_(e in V) (((I - Rb A)e,e)_A) / ((e,e)_A)$] \
   #uncover("4-")[$&= lm(I - Rb A), quad Rb A "is A-self adjoint"$] \
   #uncover("5-")[$&= 1 - lmin(Rb A)$]
 $
+
+#pagebreak()
+
+#align(center)[
+  #fig-X
+]
+
+$
+  X = (I - Pi_c) Rb A : quad H^A -> H^A
+$
+
 
 == The operator X
 
@@ -327,7 +338,7 @@ with the same idea, for a general $v in V$, we have:
 $
   ||E||_A^2 &= max_(v in V) (||(I - R A)(I - Pi_c) v||_A^2) / (||v||_A^2) \
   #uncover("2-")[$&= max_(v in V) (((I - Rb A)(I - Pi_c) v, (I - Pi_c) v)_A) / (||v||_A^2)$] \
-  #uncover("3-")[$&= 1 - min_(v in V) ((Rb A (I - Pi_c) v, (I - Pi_c) v)_A) / (||(I - Pi_c) v||_A^2) $] \ // not obvious at all
+  #uncover("3-")[$&= 1 - min_(v in V) ((Rb A (I - Pi_c) v, (I - Pi_c) v)_A) / (||(I - Pi_c) v||_A^2) quad "(not obvious)" $] \ // not obvious at all
   #uncover("4-")[$&= 1 - min_(e_H in H^A) (( Rb A e_H, e_H)_A) / (||e_H||_A^2)$]
 $
 
@@ -488,7 +499,7 @@ $
   ||E||_A^2 = 1 - min_(e_H in H^A) (( Rb A e_H, e_H)_A) / (||e_H||_A^2)
 $
 // Orthogonal diagonalization of Rb A:
-let $(mu_j, q_j)_(j=1)^n$ be the $A$-orthonormal eigenpairs ordered such that $0 < mu_1 <= dots <= mu_n$
+let $(mu_j, q_j)_(j=1)^n$ be the $A$-orthonormal eigenpairs of $Rb A$ ordered such that $0 < mu_1 <= dots <= mu_n$
 
 Any high-frequency error $e_H in H^A$ can be expanded as:
 $
@@ -662,6 +673,12 @@ $
 $
 
 == Numerical applications: effect of S
+
+#align(center)[
+  #fig-smoother-error
+]
+
+#pagebreak()
 
 #align(center)[
  #image("../../pictures/S_spectrum.png", width: 80%)
