@@ -269,10 +269,10 @@ We then have:
 $
   ||E||_A^2 &= max_(w in W) (||(I - R A)(I - Pi_c) w||_A^2) / (||w||_A^2) \
   &= max_(w in W) (((I - Rb A)(I - Pi_c) w, (I - Pi_c) w)_A) / (||w||_A^2) \
-  &= 1 - min_(w in W) ((Rb A (I - Pi_c) w, (I - Pi_c) w)_A) / (||w||_A^2) \
-  &= 1 - min_(w in W) ((Rb A (I - Pi_c) w, (I - Pi_c) w)_A) / (||(I - Pi_c) w||_A^2 + ||Pi_c w||_A^2) \
+  &= max_(w in W) ( ||(I - Pi_c) w||_A^2 -( Rb A(I - Pi_c) w, (I - Pi_c) w)_A) / (||(I - Pi_c) w||_A^2 + ||Pi_c w||_A^2) quad "(see #1)"\ 
+  &= 1 - min_(w in W) ((Rb A (I - Pi_c) w, (I - Pi_c) w)_A) / (||(I - Pi_c) w||_A^2) \
   &= 1 - min_(v in H^A) (( Rb A v, v)_A) / (||v||_A^2) \
-  &= 1 - min_(v in H^A) (((I - Pi_c) Rb A v, v)_A) / (||v||_A^2) \
+  &= 1 - min_(v in H^A) (((I - Pi_c) Rb A v, v)_A) / (||v||_A^2) quad "(see #2)"\
   &= 1 - lambda_(min)(X),
 $
 
@@ -282,14 +282,39 @@ where $ X = (I - Pi_c) Rb A quad : quad H^A arrow.r.long H^A $
 
 additional details:
 
-$
-  ((Rb A (I - Pi_c) w, (I - Pi_c) w)_A) / (||w||_A^2) = ((Rb A (I - Pi_c) w, (I - Pi_c) w)_A) / (||(I - Pi_c) w||_A^2 + ||Pi_c w||_A^2)
-$
+\#1
 
-// $Rb A (I - Pi_c) w in range(Tb) = W$ so it is unchanged by $Q_W$ \
 $||w||_A^2 = ||(I - Pi_c) w||_A^2 + ||Pi_c w||_A^2$ using the orthogonal decomposition of W
 
+$
+   & max_(w in W) ( ||(I - Pi_c) w||_A^2 -( Rb A(I - Pi_c) w, (I - Pi_c) w)_A) / (||(I - Pi_c) w||_A^2 + ||Pi_c w||_A^2) \
+   = & max_(w in W) ( ||(I - Pi_c) w||_A^2 + ||Pi_c w||_A^2 - ||Pi_c w||_A^2 -( Rb A(I - Pi_c) w, (I - Pi_c) w)_A) / (||(I - Pi_c) w||_A^2 + ||Pi_c w||_A^2) \
+   = &1 - min_(w in W) (||Pi_c w||_A^2 + ( Rb A(I - Pi_c) w, (I - Pi_c) w)_A) / (||(I - Pi_c) w||_A^2 + ||Pi_c w||_A^2)
+$
+
+using $w = v_P + v, quad v_P in range(P), v in H^A$, 
+we want to minimize:
+$
+  (||v_P||_A^2 + ( Rb A v, v)_A) / (||v||_A^2 + ||v_P||_A^2)
+$
+
+if we derive as a function of $t = ||v_P||_A^2$, the derivative is :
+$
+  (||v||_A^2 - ( Rb A v, v)_A) / (||v||_A^2 + ||v_P||_A^2)^2
+$
+
+which as the sign of $||v||_A^2 - ( Rb A v, v)_A = ( (I - Rb A) v, v)_A = ||(I - R A) v||_A^2 >= 0$
+
+the minimum is achieved when $||v_P||_A^2 = 0$, meaning $w = v in H^A$
+
+$
+  & min_(w in W) (||Pi_c w||_A^2 + ( Rb A(I - Pi_c) w, (I - Pi_c) w)_A) / (||(I - Pi_c) w||_A^2 + ||Pi_c w||_A^2) \
+  = & min_(w in W) ((Rb A (I - Pi_c) w, (I - Pi_c) w)_A) / (||(I - Pi_c) w||_A^2) \
+  = & min_(v in H^A) (((I - Pi_c) Rb A v, v)_A) / (||v||_A^2)
+$
 #v(1cm)
+
+\#2
 
 $
   (Rb A v, v)_A = ((I-Pi_c) Rb A v, v)_A
