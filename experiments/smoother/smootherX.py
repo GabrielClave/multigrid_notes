@@ -435,3 +435,74 @@ colors = {
 # # Save or show plot
 # # plot.save('spectrum_X_comparison.png', dpi=300)
 # plot
+
+# # -------------------------------------------------------------
+# # Eigenvalue of X for Additive Schwartz
+# # -------------------------------------------------------------
+
+df_raw = pd.read_csv('../data/spectrum_X_Schwartz.csv')
+
+# 2. Reshape from wide to long format
+df_plot = df_raw.melt(
+    id_vars=['k_mode', 'k_norm'],
+    value_vars=['Modal', 'GMG', 'XZ_Optimal'],
+    var_name='Interpolation',
+    value_name='Eigenvalue_Magnitude'
+)
+
+# Clean up display labels
+interp_labels = {
+    'Modal': 'Modal P',
+    'GMG': 'Standard GMG P',
+    'XZ_Optimal': 'XZ-Optimal P'
+}
+
+drawing_order = [
+    'Standard GMG P',
+    'Modal P',
+    'XZ-Optimal P'  # Plotted last -> rendered on top
+]
+
+df_plot['Interpolation'] = df_plot['Interpolation'].map(interp_labels)
+df_plot['Interpolation'] = pd.Categorical(
+    df_plot['Interpolation'], 
+    categories=drawing_order, 
+    ordered=True
+)
+df_plot = df_plot.sort_values('Interpolation')
+
+# 3. Custom palette & line styles
+colors = {
+    'Standard GMG P': '#e76f51',    # Terracotta
+    'Modal P': '#2a9d8f',           # Teal
+    'XZ-Optimal P': '#264653',      # Dark Slate
+}
+
+# 4. Generate plot
+n = len(df_raw)
+
+plot = (
+    ggplot(df_plot, aes(
+        x='k_norm', 
+        y='Eigenvalue_Magnitude', 
+        color='Interpolation'
+    ))
+    + geom_line(size=1.1, alpha=0.85)
+    + geom_hline(yintercept=1.0, linetype='dashed', color='#4e4774', size=0.8) # Convergence boundary |λ| = 1
+    + scale_color_manual(values=colors)
+    + labs(
+        x='Normalized Mode Index (k / n)',
+        y='Eigenvalue Magnitude |λ(X)|',
+        title='Additive Schwarz Spectrum Across Interpolation Operators P',
+        subtitle=f'1D Laplacian | Problem Dimension n = {n}',
+        color='Interpolation P',
+        linetype='Interpolation P'
+    )
+    + theme_minimal()
+    + theme(
+        figure_size=(9, 5),
+        legend_position='right',
+    )
+)
+
+plot

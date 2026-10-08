@@ -54,7 +54,7 @@ overlap = 10
 
 R_as, _ = build_additive_schwarz(A, ndomain, overlap)
 
-S_as = Matrix(I, n, n) - R_as * A_mat
+S_as = I - R_as * A
 
 R_bar = R_as' + R_as - R_as' * A * R_as
 # R_bar should always be symmetric
@@ -91,11 +91,17 @@ println("X_modal is A-self-adjoint on V: ", isapprox(A * X_modal_full, X_modal_f
 # Restricted operator on H^A using A-orthonormal basis Q_high_A
 Q_high_A = Q_high * inv(sqrt(Λ_high))
 X_modal_H = Q_high_A' * A * X_modal_full * Q_high_A # Euclidean symmetric -> TO DO
-println("X_modal_H is symmetric: ", isapprox(X_modal_H, X_modal_H', atol=1e-11))
+issymmetric(X_modal_H) # false
+println("X_modal_H is symmetric: ", isapprox(X_modal_H, X_modal_H', atol=1e-12)) #true
 
-λ_X_modal = sort(real(eigen(X_modal_H).values), rev=true)
+# λ_X_modal = sort(real(eigen(X_modal_full).values), rev=true)
+λ_X_modal = eigen(X_modal_full).values
+maximum(imag.(λ_X_modal)) # e-14
 
-λ_X_modal = sort(real(eigen(X_modal_full).values), rev=true)
+real(λ_X_modal)
+λ_X_modal = sort(real(λ_X_modal), rev=true)
+
+λ_X_modal_H = sort(real(eigen(X_modal_H).values), rev=true)
 
 # -------------------------------------------------------------
 # 2. GMG LINEAR INTERPOLATION COARSE SPACE
@@ -165,3 +171,121 @@ df = DataFrame(
 )
 
 CSV.write("experiments/data/spectrum_X_Schwartz.csv", df)
+
+function two_grid_iteration(CGC, e, maxiter = 500, tol = 1e-12)
+    
+    k = 0
+    while k <= maxiter
+        # if norm(e) > tol ||e||_2
+        if sqrt(dot(e, A, e)) > tol # ||e||_A
+            e = S_as*CGC*e
+        else
+            return k
+        end
+        k += 1
+    end
+    return maxiter
+end
+
+e = rand(n)
+k_opt = two_grid_iteration(I-Π_c_opt, e) # 1 iterations
+k_gmg = two_grid_iteration(I-Π_c_gmg, e) # 500 iteration
+k_modal = two_grid_iteration(I-Π_c_modal, e) # 500 iteration
+
+e_opt = S_as*(I-Π_c_opt)*e
+norm(e_opt)
+sqrt(dot(e_opt, A, e_opt))
+
+e_gmg = S_as*(I-Π_c_gmg)*e
+norm(e_gmg)
+sqrt(dot(e_gmg, A, e_gmg))
+
+e_gmg = S_as*(I-Π_c_gmg)*e_gmg
+norm(e_gmg)
+sqrt(dot(e_gmg, A, e_gmg))
+
+function two_grid_iteration_reversed(CGC, e, maxiter = 500, tol = 1e-12)
+    
+    k = 0
+    while k <= maxiter
+        # if norm(e) > tol ||e||_2
+        if sqrt(dot(e, A, e)) > tol # ||e||_A
+            e = CGC*S_as*e
+        else
+            return k
+        end
+        k += 1
+    end
+    return maxiter
+end
+
+k_opt = two_grid_iteration_reversed(I-Π_c_opt, e) # 1 iterations
+k_gmg = two_grid_iteration_reversed(I-Π_c_gmg, e) # 500 iteration
+k_modal = two_grid_iteration_reversed(I-Π_c_modal, e) # 500 iteration
+
+# using an actual multigrid algorithm
+
+function two_grid_step!(A, f, R, A_c_inv, P, r, v)
+    # coarse grid correction
+
+    # r .= f .- A*v # assumed to have been computed
+    # r_c = P'*r
+    # e_c = A_c_inv*e_c
+    # v = v + P * e_c
+    v .+= P* A_c_inv * P' * r
+
+    # post-smooth one time
+    r .= f .- A*v
+
+    v .+= R*r    
+end
+
+function two_grid_cycle(A, f, R, P, r, v; maxiter = 100, tol = 1e-9)
+
+    A_c_inv = inv(P' * A * P)
+
+    k = 0
+    r = f .- A*v
+
+    residuals = Float64[]
+    nr = norm(r)
+    push!(residuals, nr)
+
+    while k <= maxiter
+
+        if nr < tol
+            print("converged in $k steps")
+            return k, residuals
+        end
+
+        two_grid_step!(A, f, R, A_c_inv, P, r, v)
+        k += 1
+        r .= f .- A * v
+        nr = norm(r)
+        push!(residuals, nr)
+    end
+
+    print("did not converge")
+
+    return maxiter, residuals
+end
+
+f = rand(n)
+r = zeros(n)
+v = zeros(n)
+
+# optimal
+k_opt, res_hist_opt = two_grid_cycle(A, f, R_as, P_opt, r, v)
+#  1 step
+
+# GMG
+r = zeros(n)
+v = zeros(n)
+k_gmg, res_hist_gmg = two_grid_cycle(A, f, R_as, P_gmg, r, v)
+# no convergence
+
+# modal
+r = zeros(n)
+v = zeros(n)
+k_gmg, res_hist_gmg = two_grid_cycle(A, f, R_as, P_gmg, r, v)
+# no convergence
