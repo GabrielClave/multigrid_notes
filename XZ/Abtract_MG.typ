@@ -303,7 +303,7 @@ $
   (||v||_A^2 - ( Rb A v, v)_A) / (||v||_A^2 + ||v_P||_A^2)^2
 $
 
-which as the sign of $||v||_A^2 - ( Rb A v, v)_A = ( (I - Rb A) v, v)_A = ||(I - R A) v||_A^2 >= 0$
+which has the sign of $||v||_A^2 - ( Rb A v, v)_A = ( (I - Rb A) v, v)_A = ||(I - R A) v||_A^2 >= 0$
 
 the minimum is achieved when $||v_P||_A^2 = 0$, meaning $w = v in H^A$
 
@@ -667,3 +667,39 @@ $
   &arrow.double (H^(-1) U)^T A (H^(-1) U) = I\
 $
 a valid $Q$ is $Q = H^(-1) U = U D^(-1/2)$
+
+== Smoothing order
+
+Does the order of the smoothing and coarse correction step matter ?
+
+=== symmetric R
+
+If $R$ is symmetric, $S = I - R A$ is $A$-self adjoint: $S^* = I - R^T A = S$\
+
+Since $Pi_H^* = Pi_H$ and $S^* = S$:
+$ (Pi_H S)^* = S^* Pi_H^* = S Pi_H $
+
+For any operator $M$, $norm(M^*)_A = norm(M)_A$.\
+which means:
+$ norm(Pi_H S)_A = norm((Pi_H S)^*)_A = norm(S Pi_H)_A $
+
+The order does not matter for the convergence rate.
+
+=== general R
+
+$ norm(S Pi_H)_A^2 
+  &= sup_(v eq.not 0) (norm(S Pi_H v)_A^2) / (norm(v)_A^2) \
+  &= sup_(v eq.not 0) ((S Pi_H v, S Pi_H v)_A) / (norm(v)_A^2) \
+  &= sup_(v eq.not 0) (((S Pi_H)^* S Pi_H v, v)_A) / (norm(v)_A^2) \
+  &= lambda_max ((S Pi_H)^* S Pi_H) \
+  &= lambda_max (S^*Pi_H S Pi_H) $
+
+Similarly, for $Pi_H S$:
+
+$ norm(Pi_H S)_A^2 
+  &= sup_(v eq.not 0) (norm(Pi_H S v)_A^2) / (norm(v)_A^2) \
+  &= sup_(v eq.not 0) (((Pi_H S)^* Pi_H S v, v)_A) / (norm(v)_A^2) \
+  // &= lambda_max ((Pi_H S)^* Pi_H S) \
+  &= lambda_max (S^* Pi_H Pi_H S) \
+  &= lambda_max (S^* Pi_H S) $
+
