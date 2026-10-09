@@ -94,16 +94,22 @@ function get_sorted_abs_eigenvalues(S::AbstractMatrix)
     return sort(abs.(evs))
 end
 
-function compute_mode_attenuation(S::AbstractMatrix, Q::AbstractMatrix)
+function compute_mode_attenuation(S::AbstractMatrix, Q::AbstractMatrix, anorm = false)
+    if anorm
+        return [sqrt(dot(S*Q[:, k], A, S*Q[:, k])/dot(Q[:, k],A,Q[:, k])) for k in axes(Q, 2)] # ||S * q_k||_A for each column k
+    end
     # Q columns are q_k; compute ||S * q_k||_2 for each column k
     return [norm(S * Q[:, k]) for k in axes(Q, 2)]
 end
 
 function get_sorted_S_eigenvalues(R::AbstractMatrix)
 
-    R_bar = Symmetric(R' + R - R' * A * R)
-    T_bar = Symmetric(R_bar*A)
-    evs = eigen(I - T_bar).values
+    # R_bar = Symmetric(R' + R - R' * A * R)
+    # T_bar = Symmetric(R_bar*A)
+    R_bar = R' + R - R' * A * R
+    T_bar = R_bar*A
+    # evs = eigen(I - T_bar).values
+    evs = real.(eigen(I - T_bar).values)
     return sort(abs.(evs))
 end
 
@@ -121,8 +127,10 @@ end
 
 function get_sorted_X_eigenvalues(R::AbstractMatrix, P::AbstractMatrix)
 
-    R_bar = Symmetric(R' + R - R' * A * R)
-    T_bar = Symmetric(R_bar*A)
+    # R_bar = Symmetric(R' + R - R' * A * R)
+    # T_bar = Symmetric(R_bar*A)
+    R_bar = R' + R - R' * A * R
+    T_bar = R_bar*A
     Π_c = P * inv(P' * A * P) * P' * A # A-orthogonal projection onto range(P)
     X_full = (I - Π_c) * T_bar # n x n matrix here, acts on the full V, not just H
     # X_H = Symmetric(Q_high_A' * A * X_full * Q_high_A) # Euclidean symmetric -> is that what we want ?
@@ -134,7 +142,8 @@ end
 
 function get_sorted_X_eigenvalues(R::AbstractMatrix)
 
-    R_bar = Symmetric(R' + R - R' * A * R)
+    # R_bar = Symmetric(R' + R - R' * A * R)
+    R_bar = R' + R - R' * A * R
     # we want to solve R_bar * A * v = λv
     # which is equivalent to A * R_bar * A * v = λA * v
     M = Symmetric(A * R_bar * A)
@@ -154,6 +163,7 @@ function get_sorted_X_eigenvalues(R::AbstractMatrix)
 
 end
 
+# # -------------------------------------------------------------
 # experiments
 
 # Absolute values of eigenvalues, sorted in increasing order
@@ -175,6 +185,16 @@ df_fourier_attenuation = DataFrame(
     WeightedJacobi_attenuation = compute_mode_attenuation(S_wjacobi_mat, Q),
     GaussSeidel_attenuation = compute_mode_attenuation(S_gs, Q),
     AdditiveSchwarz_attenuation = compute_mode_attenuation(S_as, Q)
+)
+
+# Unsorted Fourier mode amplification factors a(k) = ||S q_k||_A in A-norm
+df_fourier_attenuation_anorm = DataFrame(
+    k = 1:n,
+    normalized_frequency = (1:n) ./ (n + 1),
+    Jacobi_attenuation = compute_mode_attenuation(S_jacobi_mat, Q, true),
+    WeightedJacobi_attenuation = compute_mode_attenuation(S_wjacobi_mat, Q, true),
+    GaussSeidel_attenuation = compute_mode_attenuation(S_gs, Q, true),
+    AdditiveSchwarz_attenuation = compute_mode_attenuation(S_as, Q, true)
 )
 
 # abs eigenvalues of S_bar, sorted in increasing order
@@ -208,8 +228,98 @@ df_sorted_X_opt_ev = DataFrame(
     AdditiveSchwarz = get_sorted_X_eigenvalues(R_as)
 )
 
+# # -------------------------------------------------------------
+# save data
+
 CSV.write("experiments/data/smoother_spectrum.csv", df_sorted_abs_ev)
 CSV.write("experiments/data/fourier_attenuation.csv", df_fourier_attenuation)
+CSV.write("experiments/data/fourier_attenuation_anorm.csv", df_fourier_attenuation_anorm)
 CSV.write("experiments/data/smoother_S_spectrum.csv", df_sorted_S_ev)
 CSV.write("experiments/data/smoother_X_spectrum.csv", df_sorted_X_ev)
 CSV.write("experiments/data/smoother_X_opt_spectrum.csv", df_sorted_X_opt_ev)
+
+# # -------------------------------------------------------------
+# two-grid convergence
+
+
+function two_grid_step!(A, f, R, A_c_inv, P, r, v)
+    # coarse grid correction
+
+    # r .= f .- A*v # assumed to have been computed
+    # r_c = P'*r
+    # e_c = A_c_inv*e_c
+    # v = v + P * e_c
+    v .+= P* A_c_inv * P' * r
+
+    # post-smooth one time
+    r .= f .- A*v
+
+    v .+= R*r    
+end
+
+function two_grid_cycle(A, f, R, P, r, v, residuals; maxiter = 100, tol = 1e-9)
+
+    A_c_inv = inv(P' * A * P)
+
+    k = 1
+    r = f .- A*v
+
+    nr = norm(r)
+    residuals[k] = nr
+
+    while k < maxiter
+
+        if nr < tol
+            print("converged in $k steps")
+            return k, residuals
+        end
+
+        two_grid_step!(A, f, R, A_c_inv, P, r, v)
+        k += 1
+        r .= f .- A * v
+        nr = norm(r)
+        residuals[k] = nr
+    end
+
+    print("did not converge")
+
+    return maxiter, residuals
+end
+
+maxiter = 25
+f = rand(n)
+r = zeros(n)
+v = zeros(n)
+
+k_J, res_hist_J = two_grid_cycle(A, f, R_jacobi_mat, P_gmg, r, copy(v), fill(NaN, maxiter); maxiter)
+k_wJ, res_hist_wJ = two_grid_cycle(A, f, R_wjacobi_mat, P_gmg, r, copy(v), fill(NaN, maxiter); maxiter)
+k_gs, res_hist_gs = two_grid_cycle(A, f, R_gs, P_gmg, r, copy(v), fill(NaN, maxiter); maxiter)
+# k_as, res_hist_as = two_grid_cycle(A, f, R_as, P_gmg, r, copy(v), fill(NaN, maxiter); maxiter)
+
+# theoretical XZ bound μ_nc+1
+tol_zero = 1e-12
+mu_J  = sort(filter(x -> abs(x) > tol_zero, df_sorted_X_ev.Jacobi))[1]
+mu_wJ = sort(filter(x -> abs(x) > tol_zero, df_sorted_X_ev.WeightedJacobi))[1]
+mu_gs = sort(filter(x -> abs(x) > tol_zero, df_sorted_X_ev.GaussSeidel))[1]
+
+cvr_J  = sqrt(1 - mu_J)
+cvr_wJ = sqrt(1 - mu_wJ)
+cvr_gs = sqrt(1 - mu_gs)
+
+bound_J  = [cvr_J^k  for k in 0:maxiter-1]
+bound_wJ = [cvr_wJ^k for k in 0:maxiter-1]
+bound_gs = [cvr_gs^k for k in 0:maxiter-1]
+
+# save dataframe
+df_convergence = DataFrame(
+    k = 1:maxiter,
+    res_J = res_hist_J ./ res_hist_J[1],
+    bound_J = bound_J,
+    res_wJ = res_hist_wJ ./ res_hist_wJ[1],
+    bound_wJ = bound_wJ,
+    res_gs = res_hist_gs ./ res_hist_gs[1],
+    bound_gs = bound_gs,
+    # res_as = res_hist_as ./ res_hist_as[1],
+)
+
+CSV.write("experiments/data/two_grid_convergence.csv", df_convergence)

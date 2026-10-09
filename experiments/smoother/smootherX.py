@@ -2,7 +2,7 @@ import numpy as np
 import pandas as pd
 from plotnine import (
     ggplot, aes, geom_line, geom_vline, geom_hline,
-    scale_color_manual, labs, theme_minimal, theme, geom_point
+    scale_color_manual, labs, theme_minimal, theme, geom_point, scale_y_log10, scale_linetype_manual
 )
 import os
 
@@ -111,7 +111,7 @@ colors = {
 }
 
 # 4. Generate plotnine figure
-n = 499
+n = df_raw.shape[0]
 high_freq_threshold = 0.5  # Boundary separating low and high frequencies (n/2)
 
 plot = (
@@ -136,6 +136,70 @@ plot = (
 # Display or save plot
 # plot.save("smoother_attenuation.png", dpi=300)
 plot
+
+# -------------------------------------------------------------
+# Attenuation factor ||Se||_A of S = I - RA for Jacobi, GS, Schwartz
+# -------------------------------------------------------------
+
+df_raw = pd.read_csv('../data/fourier_attenuation_anorm.csv')
+
+# 2. Reshape from wide to long format for plotnine
+df_plot = df_raw.melt(
+    id_vars=['k', 'normalized_frequency'],
+    value_vars=[
+        'Jacobi_attenuation', 
+        'WeightedJacobi_attenuation', 
+        'GaussSeidel_attenuation', 
+        'AdditiveSchwarz_attenuation'
+    ],
+    var_name='Smoother',
+    value_name='Attenuation'
+)
+
+# Clean up label names
+smoother_labels = {
+    'Jacobi_attenuation': 'Jacobi (ω=1.0)',
+    'WeightedJacobi_attenuation': 'Jacobi (ω=2/3)',
+    'GaussSeidel_attenuation': 'Gauss-Seidel',
+    'AdditiveSchwarz_attenuation': 'Additive Schwarz'
+}
+df_plot['Smoother'] = df_plot['Smoother'].map(smoother_labels)
+
+# 3. Custom color palette
+colors = {
+    'Jacobi (ω=1.0)': '#e76f51',              # Terracotta
+    'Jacobi (ω=2/3)': '#f4a261',       # Amber / Sandy
+    'Gauss-Seidel': '#2a9d8f',                 # Teal
+    'Additive Schwarz': '#264653'   # Dark slate
+}
+
+# 4. Generate plotnine figure
+n = df_raw.shape[0]
+high_freq_threshold = 0.5  # Boundary separating low and high frequencies (n/2)
+
+plot = (
+    ggplot(df_plot, aes(x='normalized_frequency', y='Attenuation', color='Smoother'))
+    + geom_line(size=0.7, alpha=0.85)
+    + geom_vline(xintercept=high_freq_threshold, linetype='dashed', color='#8d99ae', size=0.8)
+    + scale_color_manual(values=colors)
+    + labs(
+        x='Normalized Frequency Mode',
+        y='Attenuation Factor ||S q_k||_A / ||q_k||_A',
+        title='Smoother Mode Attenuation across Fourier Spectrum in A norm',
+        subtitle=f'1D Laplacian | n = {n}'
+    )
+    + theme_minimal()
+    + theme(
+        figure_size=(9, 5),
+        legend_position='right',
+        # legend_title=theme(text='Smoother Type'),
+    )
+)
+
+# Display or save plot
+# plot.save("smoother_attenuation.png", dpi=300)
+plot
+
 
 # -------------------------------------------------------------
 # Eigenvalues of S_bar = I - R_bar A for Jacobi, GS, Schwartz
@@ -345,46 +409,6 @@ plot = (
 plot
 
 
-# -------------------------------------------------------------
-# Eigenvalue of X for Jacobi
-# -------------------------------------------------------------
-
-# Parameters
-n = 49                  # Grid size / total modes
-n_c = 24                 # Number of coarse modes kept
-omega = 2.0 / 3.0        # Optimal weighted Jacobi parameter
-k_c = (n_c + 1) / (n + 1) # Normalized cutoff frequency
-
-# Continuous mode parameter k_norm = k / (n + 1) in (0, 1]
-k_norm = np.linspace(1 / (n + 1), 1.0, 1000)
-
-# 1. Eigenvalues of A: lambda_A(k) = 4 * sin^2(k_norm * pi / 2)
-lambda_A = 4.0 * (np.sin(k_norm * np.pi / 2.0) ** 2)
-
-# 2. Eigenvalues of T_bar = R_bar * A where R_bar = R(2I - AR), R = (omega/2)I
-# lambda_Tbar = (omega/2) * lambda_A * (2 - (omega/2) * lambda_A)
-lambda_Tb = (omega / 2.0) * lambda_A * (2.0 - (omega / 2.0) * lambda_A)
-
-# 3. Eigenvalues of X = T_bar * (I - Pi_c)
-# Modes k <= n_c are projected out to 0; modes k > n_c retain lambda_Tb
-lambda_X = np.where(k_norm <= k_c, 0.0, lambda_Tb)
-
-# Prepare DataFrame for plotnine
-df = pd.DataFrame({
-    'k_norm': np.tile(k_norm, 2),
-    'Eigenvalue': np.concatenate([lambda_Tb, lambda_X]),
-    'Operator': (
-        ['T_bar (Smoother)'] * len(k_norm) +
-        ['X = T_bar(I - Pi_c)'] * len(k_norm)
-    )
-})
-
-# Color palette matching operator roles
-colors = {
-    'T_bar (Smoother)': '#e07a5f',     # Terracotta
-    'X = T_bar(I - Pi_c)': '#3d405b'   # Dark slate
-}
-
 # # -------------------------------------------------------------
 # # Eigenvalue of X for GS
 # # -------------------------------------------------------------
@@ -505,4 +529,96 @@ plot = (
     )
 )
 
+plot
+
+# # -------------------------------------------------------------
+# # Observed vs estimated convergence rate 
+# # -------------------------------------------------------------
+
+# 1. Load data exported from Julia
+df_raw = pd.read_csv('../data/two_grid_convergence.csv')
+
+# 2. Reshape from wide to long format
+df_plot = df_raw.melt(
+    id_vars=['k'],
+    value_vars=['res_J', 'bound_J', 'res_wJ', 'bound_wJ', 'res_gs', 'bound_gs'],
+    var_name='Series',
+    value_name='Relative_Residual'
+)
+
+# Filter out NaNs to keep the plot clean after convergence
+df_plot = df_plot.dropna(subset=['Relative_Residual'])
+
+# 3. Map series names to Smoother type and Line Type (Observed vs Bound)
+series_mapping = {
+    'res_J': ('Jacobi (ω=1.0)', 'Observed'),
+    'bound_J': ('Jacobi (ω=1.0)', 'XZ Bound'),
+    'res_wJ': ('Weighted Jacobi (ω=2/3)', 'Observed'),
+    'bound_wJ': ('Weighted Jacobi (ω=2/3)', 'XZ Bound'),
+    'res_gs': ('Gauss-Seidel', 'Observed'),
+    'bound_gs': ('Gauss-Seidel', 'XZ Bound'),
+}
+
+df_plot[['Smoother', 'Type']] = pd.DataFrame(
+    df_plot['Series'].map(series_mapping).tolist(), 
+    index=df_plot.index
+)
+
+# 4. Set drawing order and categorical factors
+drawing_order = [
+    'Jacobi (ω=1.0)',
+    'Weighted Jacobi (ω=2/3)',
+    'Gauss-Seidel'
+]
+
+df_plot['Smoother'] = pd.Categorical(
+    df_plot['Smoother'], 
+    categories=drawing_order, 
+    ordered=True
+)
+
+df_plot['Type'] = pd.Categorical(
+    df_plot['Type'], 
+    categories=['Observed', 'XZ Bound'], 
+    ordered=True
+)
+
+# Sort so observed curves render cleanly on top of theoretical bounds
+df_plot = df_plot.sort_values(by=['Smoother', 'Type'], ascending=[True, False])
+
+# 5. Define color scheme and linetypes matching your spectrum plot
+colors = {
+    'Jacobi (ω=1.0)': '#e76f51',          # Terracotta
+    'Weighted Jacobi (ω=2/3)': '#f4a261',  # Amber / Sandy
+    'Gauss-Seidel': '#2a9d8f'              # Teal
+}
+
+linetypes = {
+    'Observed': 'solid',
+    'XZ Bound': 'dashed'
+}
+
+# 6. Generate plot
+plot = (
+    ggplot(df_plot, aes(x='k', y='Relative_Residual', color='Smoother', linetype='Type'))
+    + geom_line(size=1.1, alpha=0.85)
+    + scale_y_log10()
+    + scale_color_manual(values=colors)
+    + scale_linetype_manual(values=linetypes)
+    + labs(
+        x='Iteration (k)',
+        y='Normalized Residual Norm ||r_k|| / ||r_0||',
+        title='Two-Grid Convergence vs Theoretical XZ Bound',
+        subtitle=r'Observed residual decay compared against $\sqrt{1 - \mu_{n_c+1}}^k$',
+        color='Smoother',
+        linetype='Line Type'
+    )
+    + theme_minimal()
+    + theme(
+        figure_size=(9, 5),
+        legend_position='right'
+    )
+)
+
+# Display or save plot
 plot

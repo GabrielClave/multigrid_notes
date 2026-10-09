@@ -53,8 +53,12 @@ ndomain = 10
 overlap = 10
 
 R_as, _ = build_additive_schwarz(A, ndomain, overlap)
+issymmetric(R_as) #false
+isapprox(R_as, R_as', atol=1e-12) #true
 
 S_as = I - R_as * A
+isapprox(A*S_as, (A*S_as)', atol=1e-12) #true
+# S is A-self adjoint (almost)
 
 R_bar = R_as' + R_as - R_as' * A * R_as
 # R_bar should always be symmetric
@@ -160,7 +164,7 @@ sum(λ_X_opt .> 1e-12) #235 > n_c
 # -------------------------------------------------------------
 # EXPORT TO CSV
 # -------------------------------------------------------------
-k_high_norm = [(n_c + k) / (n + 1) for k in 1:n]
+k_high_norm = [k/n for k in 1:n]
 
 df = DataFrame(
     k_mode = 1:n,
@@ -171,6 +175,10 @@ df = DataFrame(
 )
 
 CSV.write("experiments/data/spectrum_X_Schwartz.csv", df)
+
+# -------------------------------------------------------------
+# Actual Multigrid algorithm
+# -------------------------------------------------------------
 
 function two_grid_iteration(CGC, e, maxiter = 500, tol = 1e-12)
     
@@ -289,3 +297,15 @@ r = zeros(n)
 v = zeros(n)
 k_gmg, res_hist_gmg = two_grid_cycle(A, f, R_as, P_gmg, r, v)
 # no convergence
+
+
+# -------------------------------------------------------------
+# Fourier attenuation
+# -------------------------------------------------------------
+
+F_as = eigen(S_as) # complex
+evalues = F_as.values
+maximum(imag.(evalues)) # e-15
+evect = F_as.vectors
+maximum(imag.(evect)) # 0.6
+cond(evect) #1e7
