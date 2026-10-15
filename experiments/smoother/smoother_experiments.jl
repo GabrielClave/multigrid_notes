@@ -102,14 +102,14 @@ function compute_mode_attenuation(S::AbstractMatrix, Q::AbstractMatrix, anorm = 
     return [norm(S * Q[:, k]) for k in axes(Q, 2)]
 end
 
-function get_sorted_S_eigenvalues(R::AbstractMatrix)
+function get_sorted_T_bar_eigenvalues(R::AbstractMatrix)
 
     # R_bar = Symmetric(R' + R - R' * A * R)
     # T_bar = Symmetric(R_bar*A)
     R_bar = R' + R - R' * A * R
     T_bar = R_bar*A
     # evs = eigen(I - T_bar).values
-    evs = real.(eigen(I - T_bar).values)
+    evs = real.(eigen(T_bar).values)
     return sort(abs.(evs))
 end
 
@@ -140,18 +140,22 @@ function get_sorted_X_eigenvalues(R::AbstractMatrix, P::AbstractMatrix)
     evs = real(eigen(X_full).values) #no guarantee to be real
 end
 
-function get_sorted_X_eigenvalues(R::AbstractMatrix)
+function build_P_opt(R)
 
-    # R_bar = Symmetric(R' + R - R' * A * R)
     R_bar = R' + R - R' * A * R
     # we want to solve R_bar * A * v = λv
     # which is equivalent to A * R_bar * A * v = λA * v
-    M = Symmetric(A * R_bar * A)
+    M = Symmetric(A * R_bar * A) # should we symmetrize or take the real part of eigenvectors ?
     F_Tbar = eigen(M, A)
 
     idx_opt = sortperm(F_Tbar.values) # Sort ascending μ_1 <= μ_2 ...
     Q_Tbar = F_Tbar.vectors[:, idx_opt] # A-orthogonal
     P = Q_Tbar[:, 1:n_c]
+end
+
+function get_sorted_X_eigenvalues(R::AbstractMatrix)
+
+    P = build_P_opt(R)
 
     Π_c = P * inv(P' * A * P) * P' * A # A-orthogonal projection onto range(P)
     X_full = (I - Π_c) * R_bar*A # n x n matrix here, acts on the full V, not just H
@@ -200,10 +204,10 @@ df_fourier_attenuation_anorm = DataFrame(
 # abs eigenvalues of S_bar, sorted in increasing order
 df_sorted_S_ev = DataFrame(
     k = 1:n,
-    Jacobi = get_sorted_S_eigenvalues(R_jacobi_mat),
-    WeightedJacobi = get_sorted_S_eigenvalues(R_wjacobi_mat),
-    GaussSeidel = get_sorted_S_eigenvalues(R_gs),
-    AdditiveSchwarz = get_sorted_S_eigenvalues(R_as)
+    Jacobi = get_sorted_T_bar_eigenvalues(R_jacobi_mat),
+    WeightedJacobi = get_sorted_T_bar_eigenvalues(R_wjacobi_mat),
+    GaussSeidel = get_sorted_T_bar_eigenvalues(R_gs),
+    AdditiveSchwarz = get_sorted_T_bar_eigenvalues(R_as)
 )
 
 # eigenvalues of X_H, sorted in increasing order
@@ -234,7 +238,7 @@ df_sorted_X_opt_ev = DataFrame(
 CSV.write("experiments/data/smoother_spectrum.csv", df_sorted_abs_ev)
 CSV.write("experiments/data/fourier_attenuation.csv", df_fourier_attenuation)
 CSV.write("experiments/data/fourier_attenuation_anorm.csv", df_fourier_attenuation_anorm)
-CSV.write("experiments/data/smoother_S_spectrum.csv", df_sorted_S_ev)
+CSV.write("experiments/data/smoother_T_spectrum.csv", df_sorted_S_ev)
 CSV.write("experiments/data/smoother_X_spectrum.csv", df_sorted_X_ev)
 CSV.write("experiments/data/smoother_X_opt_spectrum.csv", df_sorted_X_opt_ev)
 
@@ -257,14 +261,15 @@ function two_grid_step!(A, f, R, A_c_inv, P, r, v)
     v .+= R*r    
 end
 
-function two_grid_cycle(A, f, R, P, r, v, residuals; maxiter = 100, tol = 1e-9)
+function two_grid_cycle(A, f, R, P, r, v, residuals; maxiter = 100, tol = 1e-9, normA = false)
 
     A_c_inv = inv(P' * A * P)
 
     k = 1
     r = f .- A*v
 
-    nr = norm(r)
+    if normA nr = dot(r, A ,r)
+        else nr = norm(r) end
     residuals[k] = nr
 
     while k < maxiter
@@ -277,7 +282,8 @@ function two_grid_cycle(A, f, R, P, r, v, residuals; maxiter = 100, tol = 1e-9)
         two_grid_step!(A, f, R, A_c_inv, P, r, v)
         k += 1
         r .= f .- A * v
-        nr = norm(r)
+        if normA nr = dot(r, A ,r)
+            else nr = norm(r) end
         residuals[k] = nr
     end
 
@@ -285,6 +291,55 @@ function two_grid_cycle(A, f, R, P, r, v, residuals; maxiter = 100, tol = 1e-9)
 
     return maxiter, residuals
 end
+
+function compute_XZ_bound(R, P, max_k; tol = 1e-12)
+
+    evs = get_sorted_X_eigenvalues(R, P)
+    mu = sort(filter(x -> abs(x) > tol, evs))[1]
+    cvr  = sqrt(1 - mu)
+    bound  = [cvr^k  for k in 0:max_k-1]
+    # /!\ the actual bound is ||E^k||
+    # this is ||E||^k, which is >=
+    return bound
+end
+
+# # -------------------------------------------------------------
+# Optimal P
+
+P_opt_J = build_P_opt(R_jacobi_mat)
+P_opt_wJ = build_P_opt(R_wjacobi_mat)
+P_opt_gs = build_P_opt(R_gs)
+
+maxiter = 25
+f = rand(n)
+r = zeros(n)
+v = zeros(n)
+
+k_J, res_hist_J = two_grid_cycle(A, f, R_jacobi_mat, P_opt_J, r, copy(v), fill(NaN, maxiter); maxiter, normA = true)
+k_wJ, res_hist_wJ = two_grid_cycle(A, f, R_wjacobi_mat, P_opt_wJ, r, copy(v), fill(NaN, maxiter); maxiter, normA = true)
+k_gs, res_hist_gs = two_grid_cycle(A, f, R_gs, P_opt_gs, r, copy(v), fill(NaN, maxiter); maxiter, normA = true)
+
+# theoretical XZ bound μ_nc+1
+tol_zero = 1e-12
+
+bound_J  = compute_XZ_bound(R_jacobi_mat, P_opt_J, maxiter)
+bound_wJ = compute_XZ_bound(R_wjacobi_mat, P_opt_wJ, maxiter)
+bound_gs = compute_XZ_bound(R_gs, P_opt_gs, maxiter)
+
+df_convergence_opt = DataFrame(
+    k = 1:maxiter,
+    res_J = res_hist_J ./ res_hist_J[1],
+    bound_J = bound_J,
+    res_wJ = res_hist_wJ ./ res_hist_wJ[1],
+    bound_wJ = bound_wJ,
+    res_gs = res_hist_gs ./ res_hist_gs[1],
+    bound_gs = bound_gs,
+    # res_as = res_hist_as ./ res_hist_as[1],
+)
+
+CSV.write("experiments/data/two_grid_convergence_opt.csv", df_convergence_opt)
+# # -------------------------------------------------------------
+# Linear interpolation
 
 maxiter = 25
 f = rand(n)
@@ -298,17 +353,10 @@ k_gs, res_hist_gs = two_grid_cycle(A, f, R_gs, P_gmg, r, copy(v), fill(NaN, maxi
 
 # theoretical XZ bound μ_nc+1
 tol_zero = 1e-12
-mu_J  = sort(filter(x -> abs(x) > tol_zero, df_sorted_X_ev.Jacobi))[1]
-mu_wJ = sort(filter(x -> abs(x) > tol_zero, df_sorted_X_ev.WeightedJacobi))[1]
-mu_gs = sort(filter(x -> abs(x) > tol_zero, df_sorted_X_ev.GaussSeidel))[1]
 
-cvr_J  = sqrt(1 - mu_J)
-cvr_wJ = sqrt(1 - mu_wJ)
-cvr_gs = sqrt(1 - mu_gs)
-
-bound_J  = [cvr_J^k  for k in 0:maxiter-1]
-bound_wJ = [cvr_wJ^k for k in 0:maxiter-1]
-bound_gs = [cvr_gs^k for k in 0:maxiter-1]
+bound_J  = compute_XZ_bound(R_jacobi_mat, P_gmg, maxiter)
+bound_wJ = compute_XZ_bound(R_wjacobi_mat, P_gmg, maxiter)
+bound_gs = compute_XZ_bound(R_gs, P_gmg, maxiter)
 
 # save dataframe
 df_convergence = DataFrame(
@@ -323,3 +371,29 @@ df_convergence = DataFrame(
 )
 
 CSV.write("experiments/data/two_grid_convergence.csv", df_convergence)
+
+# with norm A
+
+maxiter = 25
+f = rand(n)
+r = zeros(n)
+v = zeros(n)
+
+k_J, res_hist_J = two_grid_cycle(A, f, R_jacobi_mat, P_gmg, r, copy(v), fill(NaN, maxiter); maxiter, normA = true)
+k_wJ, res_hist_wJ = two_grid_cycle(A, f, R_wjacobi_mat, P_gmg, r, copy(v), fill(NaN, maxiter); maxiter, normA = true)
+k_gs, res_hist_gs = two_grid_cycle(A, f, R_gs, P_gmg, r, copy(v), fill(NaN, maxiter); maxiter, normA = true)
+# k_as, res_hist_as = two_grid_cycle(A, f, R_as, P_gmg, r, copy(v), fill(NaN, maxiter); maxiter)
+
+# save dataframe
+df_convergence_normA = DataFrame(
+    k = 1:maxiter,
+    res_J = res_hist_J ./ res_hist_J[1],
+    bound_J = bound_J,
+    res_wJ = res_hist_wJ ./ res_hist_wJ[1],
+    bound_wJ = bound_wJ,
+    res_gs = res_hist_gs ./ res_hist_gs[1],
+    bound_gs = bound_gs,
+    # res_as = res_hist_as ./ res_hist_as[1],
+)
+
+CSV.write("experiments/data/two_grid_convergence_normA.csv", df_convergence)
