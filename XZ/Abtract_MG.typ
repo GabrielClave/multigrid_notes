@@ -269,8 +269,8 @@ We then have:
 $
   ||E||_A^2 &= max_(w in W) (||(I - R A)(I - Pi_c) w||_A^2) / (||w||_A^2) \
   &= max_(w in W) (((I - Rb A)(I - Pi_c) w, (I - Pi_c) w)_A) / (||w||_A^2) \
-  &= max_(w in W) ( ||(I - Pi_c) w||_A^2 -( Rb A(I - Pi_c) w, (I - Pi_c) w)_A) / (||(I - Pi_c) w||_A^2 + ||Pi_c w||_A^2) quad "(see #1)"\ 
-  &= 1 - min_(w in W) ((Rb A (I - Pi_c) w, (I - Pi_c) w)_A) / (||(I - Pi_c) w||_A^2) \
+  &= max_(w in W) ( ||(I - Pi_c) w||_A^2 -( Rb A(I - Pi_c) w, (I - Pi_c) w)_A) / (||(I - Pi_c) w||_A^2 + ||Pi_c w||_A^2)\ 
+  &= 1 - min_(w in W) ((Rb A (I - Pi_c) w, (I - Pi_c) w)_A) / (||(I - Pi_c) w||_A^2) quad "(see #1)"\
   &= 1 - min_(v in H^A) (( Rb A v, v)_A) / (||v||_A^2) \
   &= 1 - min_(v in H^A) (((I - Pi_c) Rb A v, v)_A) / (||v||_A^2) quad "(see #2)"\
   &= 1 - lambda_(min)(X),
@@ -481,7 +481,7 @@ $
 
 which is another way to see that the (normalized) norm reduction effect of the smoother will be small for $epsilon$-smooth errors
 
-== Numerical examples
+= Numerical examples
 
 For a general operator $E$:
 
@@ -513,7 +513,7 @@ $
   lk (A) = 4sin((k pi) / (2(n+1)))\
   q_k (A) = ( sin((j k pi) / (n+1)) )_j
 $
-=== Weighted Jacobi
+== Weighted Jacobi
 
 $
   R = omega D^(-1) = omega /2 I 
@@ -577,7 +577,7 @@ $
 &= 1 - 1/3lambda_(n_c + 1)(A)(2 - 1/3lambda_(n_c + 1)(A))
 $
 
-=== Gauss-Seidel and Additive Schwartz
+== Gauss-Seidel and Additive Schwartz
 
 Here $R$ is no longer symmetric, and we do not have a simple expression for $Rb "or" Tb$.
 
@@ -617,7 +617,76 @@ $
 $
 // both formulations generate the same optimal eigenspaces $V_(n_c) = "span"(v_1, ..., v_(n_c))$. ?
 
-= Personal notes
+== Convergence Rate
+
+The convergence of succesive two-grid iteration is given by:
+$
+  ||E^k||_A = max_(v in V \ ||v||_A = 1) ||E^k v||
+$
+
+In general we have
+$
+  ||E^k||_A <= ||E||_A^k = (1 - lmin(X))^k
+$
+asymptotically, we know that
+$
+  lim_(n arrow infinity) ||E^k||_A^(1/k) = rho(E)
+$
+so the bound in sharp when $ ||E||_A = rho(E)$
+
+=== Symmetric smoother
+
+When $R^T = R , quad S^* = (I - R^T A) = S$ and $Sb = I - Rb A = (I - R A)^2 = S^2$
+
+Because S is A-self adjoint, there exist an A-orthogonal eigenvector basis of $V$, that we will note $Q$.
+
+But if $(q, lambda)$ is an eigenpair of $S$,
+$
+  S q = lambda q arrow.double Sb q = lambda^2 q
+$
+
+$(q, lambda^2)$ is also an eigenpair of $Sb$ // they are also orthogonal, Q as full rank
+
+==== Optimal range(P)
+
+with ${mu_j , q_j}$ the eigenpairs of $Rb A$ in increasing order, we use $range(P) = "vect"{q_1, ..., q_n_c}$, wich means $H^Ri = "vect"{q_(n_c + 1), ..., q_n}$.
+// H^Rb or H_A ?
+
+The worst direction in V that limits the convergence is $ q_(n_c + 1) = "arg"max_(v in V \ ||v||_A = 1) ||E v||_A $
+// is that true ?
+
+$
+  (q_(n_c + 1), mu_(n_c + 1)) "is an eigenpair of" Rb A & arrow.double (q_(n_c + 1), 1 - mu_(n_c + 1)) "is an eigenpair of" I - Rb A = Sb = S^2 \
+  & arrow.double (q_(n_c + 1), plus.minus sqrt(1 - mu_(n_c + 1))) "is an eigenpair of" S = I - R A 
+$
+
+since $q_(n_c + 1) in H$, we have
+
+$
+  E q_(n_c + 1) & = (I - R A)(I - Pi_c) q_(n_c + 1) \
+  & = (I - R A)q_(n_c + 1) \
+  & = plus.minus (sqrt(1 - mu_(n_c + 1)) )q_(n_c + 1)
+$
+
+And so successive two-grid iteration behave as: 
+$
+  E^k q_(n_c + 1) = (plus.minus 1)^k (1 - mu_(n_c + 1) )^(k/2) q_(n_c + 1)
+$
+
+The observed convergence rate is:
+$
+  ||E^k q_(n_c + 1)||_A & = (1 - mu_(n_c + 1) )^(k/2) \
+  & = ||E||_A^k 
+$
+
+// non-optimal P
+
+// if S > 0 it works, otherwise no
+
+// in practice it is not too bad, how can we see it ?
+
+
+= Notes
 
 == Matrix representation of X
 
