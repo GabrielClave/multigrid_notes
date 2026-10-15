@@ -1,11 +1,12 @@
 import numpy as np
 import pandas as pd
 from plotnine import (
-    ggplot, aes, geom_line, geom_vline, geom_hline,
+    ggplot, aes, geom_line, geom_vline, geom_hline, element_rect,
     scale_color_manual, labs, theme_minimal, theme, geom_point, scale_y_log10, scale_linetype_manual
 )
 import os
 
+bg_color = "#FAFAFA"
 
 # -------------------------------------------------------------
 # Eigenvalues of S = I - RA for Jacobi, GS, Schwartz
@@ -67,12 +68,14 @@ plot_spec = (
     + theme(
         figure_size=(9, 5),
         legend_position='right',
+        plot_background=element_rect(fill=bg_color, color=bg_color),
         # legend_title=theme(text='Smoother Type'),
     )
 )
 
 # Display or save plot
 plot_spec
+# plot_spec.save("../../pictures/plot_S_spectrum.png", dpi=300)
 
 # -------------------------------------------------------------
 # Attenuation factor ||Se|| of S = I - RA for Jacobi, GS, Schwartz
@@ -114,7 +117,7 @@ colors = {
 n = df_raw.shape[0]
 high_freq_threshold = 0.5  # Boundary separating low and high frequencies (n/2)
 
-plot = (
+plot_fourier = (
     ggplot(df_plot, aes(x='normalized_frequency', y='Attenuation', color='Smoother'))
     + geom_line(size=0.7, alpha=0.85)
     + geom_vline(xintercept=high_freq_threshold, linetype='dashed', color='#8d99ae', size=0.8)
@@ -129,13 +132,15 @@ plot = (
     + theme(
         figure_size=(9, 5),
         legend_position='right',
+        plot_background=element_rect(fill=bg_color, color=bg_color),
         # legend_title=theme(text='Smoother Type'),
     )
 )
 
 # Display or save plot
 # plot.save("smoother_attenuation.png", dpi=300)
-plot
+plot_fourier
+# plot_fourier.save("../../pictures/plot_fourier_attenuation.png", dpi=300)
 
 # -------------------------------------------------------------
 # Attenuation factor ||Se||_A of S = I - RA for Jacobi, GS, Schwartz
@@ -192,6 +197,7 @@ plot = (
     + theme(
         figure_size=(9, 5),
         legend_position='right',
+        plot_background=element_rect(fill=bg_color, color=bg_color),
         # legend_title=theme(text='Smoother Type'),
     )
 )
@@ -206,7 +212,7 @@ plot
 # -------------------------------------------------------------
 
 # 1. Load the spectrum data
-df_raw = pd.read_csv('../data/smoother_S_spectrum.csv')
+df_raw = pd.read_csv('../data/smoother_T_spectrum.csv')
 
 # Normalize the index axis to [0, 1] for scale invariance
 if 'normalized_index' not in df_raw.columns:
@@ -240,27 +246,29 @@ colors = {
 # 4. Generate plot
 n = len(df_raw)
 
-plot = (
+plot_T = (
     ggplot(df_plot, aes(x='normalized_index', y='Eigenvalue_Magnitude', color='Smoother'))
     + geom_line(size=1.1, alpha=0.85)
     + geom_hline(yintercept=1.0, linetype='dashed', color="#4e4774", size=0.8) # Convergence boundary |λ| = 1
     + scale_color_manual(values=colors)
     + labs(
         x='Normalized Eigenvalue Index',
-        y='Eigenvalue Magnitude |λ(S)|',
-        title='Spectrum of S_bar = ( I - R_bar A) (Sorted Eigenvalue Magnitudes)',
+        y='Eigenvalue Magnitude λ(S)',
+        title='Spectrum of T_bar = R_bar * A (Sorted Eigenvalue Magnitudes)',
         subtitle=f'1D Laplacian | n = {n}'
     )
     + theme_minimal()
     + theme(
         figure_size=(9, 5),
         legend_position='right',
+        plot_background=element_rect(fill=bg_color, color=bg_color),
         # legend_title=theme(text='Smoother Type'),
     )
 )
 
 # Display or save plot
-plot
+plot_T
+# plot_T.save("../../pictures/plot_T_spectrum.png", dpi=300)
 
 # -------------------------------------------------------------
 # Eigenvalues of X = (I - Pi_c) R_bar A for Jacobi, GS, Schwartz
@@ -301,7 +309,7 @@ colors = {
 # 4. Generate plot
 n = len(df_raw)
 
-plot = (
+plot_X_gmg = (
     ggplot(df_plot, aes(x='normalized_index', y='Eigenvalue_Magnitude', color='Smoother'))
     + geom_line(size=1.1, alpha=0.85)
     + geom_hline(yintercept=1.0, linetype='dashed', color="#4e4774", size=0.8) # Convergence boundary |λ| = 1
@@ -310,18 +318,20 @@ plot = (
         x='Normalized Eigenvalue Index',
         y='Eigenvalue Magnitude |λ(S)|',
         title='Spectrum of X with linear interpolation P (Sorted Eigenvalue Magnitudes)',
-        subtitle=f'1D Laplacian | dim(H) = n - n_c = {n}'
+        subtitle=f'1D Laplacian | n = {n}'
     )
     + theme_minimal()
     + theme(
         figure_size=(9, 5),
         legend_position='right',
+        plot_background=element_rect(fill=bg_color, color=bg_color),
         # legend_title=theme(text='Smoother Type'),
     )
 )
 
 # Display or save plot
-plot
+plot_X_gmg
+# plot_X_gmg.save("../../pictures/plot_X_spectrum.png", dpi=300)
 
 # -------------------------------------------------------------
 # Eigenvalues of optimal X = (I - Pi_c_optimal) R_bar A for Jacobi, GS, Schwartz
@@ -386,7 +396,7 @@ colors = {
 # 4. Generate plot
 n = len(df_raw)
 
-plot = (
+plot_X = (
     ggplot(df_plot, aes(x='normalized_index', y='Eigenvalue_Magnitude', color='Smoother'))
     + geom_line(size=1.1, alpha=0.85)
     + geom_hline(yintercept=1.0, linetype='dashed', color="#4e4774", size=0.8) # Convergence boundary |λ| = 1
@@ -395,19 +405,20 @@ plot = (
         x='Normalized Eigenvalue Index',
         y='Eigenvalue Magnitude |λ(S)|',
         title='Spectrum of X with optimal interpolation P (Sorted Eigenvalue Magnitudes)',
-        subtitle=f'1D Laplacian | dim(H) = n - n_c = {n}'
+        subtitle=f'1D Laplacian | n = {n}'
     )
     + theme_minimal()
     + theme(
         figure_size=(9, 5),
         legend_position='right',
+        plot_background=element_rect(fill=bg_color, color=bg_color),
         # legend_title=theme(text='Smoother Type'),
     )
 )
 
 # Display or save plot
-plot
-
+plot_X
+# plot_X.save("../../pictures/plot_X_opt_spectrum.png", dpi=300)
 
 # # -------------------------------------------------------------
 # # Eigenvalue of X for GS
@@ -526,6 +537,7 @@ plot = (
     + theme(
         figure_size=(9, 5),
         legend_position='right',
+        plot_background=element_rect(fill=bg_color, color=bg_color),
     )
 )
 
@@ -599,7 +611,7 @@ linetypes = {
 }
 
 # 6. Generate plot
-plot = (
+plot_convergence = (
     ggplot(df_plot, aes(x='k', y='Relative_Residual', color='Smoother', linetype='Type'))
     + geom_line(size=1.1, alpha=0.85)
     + scale_y_log10()
@@ -609,16 +621,18 @@ plot = (
         x='Iteration (k)',
         y='Normalized Residual Norm ||r_k|| / ||r_0||',
         title='Two-Grid Convergence vs Theoretical XZ Bound',
-        subtitle=r'Observed residual decay compared against $\sqrt{1 - \mu_{n_c+1}}^k$',
+        subtitle=r'Observed residual decay compared against ||E||$_A$',
         color='Smoother',
         linetype='Line Type'
     )
     + theme_minimal()
     + theme(
         figure_size=(9, 5),
-        legend_position='right'
+        legend_position='right',
+        plot_background=element_rect(fill=bg_color, color=bg_color),
     )
 )
 
 # Display or save plot
-plot
+plot_convergence
+plot_convergence.save("../../pictures/plot_convergence.png", dpi=300)

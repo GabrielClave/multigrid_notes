@@ -155,69 +155,6 @@ We decompose the space into high and low frequency errors:
 // *The Approximation Property*: The coarse grid can approximate smooth errors.
 // $ min_(u_c) ||e - P u_c||_D^2 <= beta ||e||_A^2 $
 
-// #align(center)[
-//   #cetz.canvas({
-//     import cetz.draw: *
-
-//     let circle_radius = 0.06
-//     let main-purple = rgb("#7570b3")
-//     let red-accent  = rgb("#e04040")
-//     let blue-accent = rgb("#386cb0")
-
-//     let vp = 4.2
-//     let vh = 3.2
-
-//     // Coordinates
-//     let orig = (0, 0)
-//     let v-pt = (vp, vh)            // Vector v in V
-//     let Qc-v = (vp, 0)             // Projection Q_c v on range(P)
-//     let IQc-v = (0, vh)            // Projection (I - Q_c) v on W_P^\perp_A
-
-//     // Axes
-//     line((-0.5, 0), (5.5, 0), stroke: 1pt, name: "x-axis")
-//     line((0, -0.5), (0, 4.2), stroke: 1pt, name: "y-axis")
-
-//     content((5.6, 0), $text(range)(P)$, anchor: "west")
-//     content((0, 4.3), $H^A$, anchor: "south")
-
-//     // --- PROJECTIONS OF v ---
-//     // Dashed lines forming the rectangular decomposition
-//     line(v-pt, IQc-v, stroke: (dash: "dashed", paint: gray))
-//     line(v-pt, Qc-v, stroke: (dash: "dashed", paint: gray))
-
-//     // Vector v
-//     line(
-//       orig, v-pt,
-//       mark: (end: "triangle", fill: main-purple),
-//       stroke: (paint: main-purple, thickness: 1.5pt)
-//     )
-//     circle(v-pt, radius: circle_radius, fill: black, stroke: none)
-//     content(v-pt, padding: 0.15, $e$, anchor: "south-west")
-
-//     // Coarse component Q_c v on range(P)
-//     content(Qc-v, padding: 0.15, $P u_c$, anchor: "north")
-
-//     // Complement component (I - Q_c)v on y-axis
-//     content(IQc-v, padding: 0.15, $e - P u_c$, anchor: "east")
-
-//     // --- DISTANCE ANNOTATION (Double-edged arrow along y-axis) ---
-//     line(
-//       (vp + 0.15, 0.1), (vp + 0.15, 3.1),
-//       mark: (start: "triangle", end: "triangle", fill: red-accent),
-//       stroke: (paint: red-accent, thickness: 0.6pt),
-//       name: "distance"
-//     )
-
-//     content(
-//       (rel: (2.5, 0), to: "distance"),
-//       text(size: 14pt)[
-//         $d_D (e, text(range)(P)) \ = min_(u_c)||e - P u_c||_D$
-//       ],
-//       anchor: "center"
-//     )
-//   })
-// ]
-
 // == The approximation property
 // *The Approximation Property*: The coarse grid can approximate smooth errors.
 // $ min_(u_c) ||e - P u_c||_D^2 <= beta ||e||_A^2 $
@@ -391,107 +328,6 @@ $ ||E||_A^2 = 1 - lambda_"min" (X) $
   $lambda_"min" (X) approx 1$ and $||E||_A^2 = 1 - lambda_"min" (X) approx 0$
 
 - If $X$ has a small eigenvalue, the associated direction in $H$ will escape both the effect of the smoother and the coarse space correction: convergence will stagnate.
-
-// let's forget Z ?
-// ==  The operator Z
-
-// The inverse of $X$ on $H^A$ can be explicitly written as:
-// $ Z = overline(T)^(-1) (I - Q_c) quad : quad H^A -> H^A $
-
-// So we have $ lambda_"min" (X) = 1 / (lambda_"max" (Z)) $
-
-// #pagebreak()
-
-// *Interpretation of $Z$:* \
-// After applying the smoother, the remaining smooth error should be as close as possible to $op("range")(P)$. \
-// The distance is $d_(Ri) (e, op("range")(P)) = min_(e_P in op("range")(P)) ||e - e_P||_(Ri)^2 = ||(I - Q_c)v||^2_(Ri)$
-
-// $Z$ allows us to express this distance in the $A$-geometry:
-// $ (Z v, v)_A =  ||(I - Q_c)v||_(Ri)^2 $
-
-// == Z
-
-// And so in the worst-case scenario we have:
-// $ lambda_"max" (Z) &= max_(v in H^A) r_Z (v) \
-//                   &= max_(v in H^A) (Z v, v)_A / (v,v)_A \
-//                   &= max_(v in H^A) (||(I - Q_c)v||_(Ri)^2) / (||v||_A^2) \
-//                   &= K(V_c) $
-
-// #pagebreak()
-
-// $K(V_c)$ is (more or less) the minimum K that verifies the approximation property:
-// $ ||(I - Q_c)v||_(Ri)^2 <= K||v||_A^2 $
-
-
-// #align(center)[
-//   #cetz.canvas({
-//     import cetz.draw: *
-
-//     let circle_radius = 0.06
-//     let main-purple = rgb("#7570b3")
-//     let red-accent  = rgb("#e04040")
-//     let blue-accent = rgb("#386cb0")
-
-//     let vp = 4.2
-//     let vh = 3.2
-
-//     // Coordinates
-//     let orig = (0, 0)
-//     let v-pt = (vp, vh)            // Vector v in V
-//     let Qc-v = (vp, 0)             // Projection Q_c v on range(P)
-//     let IQc-v = (0, vh)            // Projection (I - Q_c) v on W_P^\perp_A
-
-//     // Axes
-//     line((-0.5, 0), (5.5, 0), stroke: 1pt, name: "x-axis")
-//     line((0, -0.5), (0, 4.2), stroke: 1pt, name: "y-axis")
-
-//     content((5.6, 0), $text(range)(P)$, anchor: "west")
-//     content((0, 4.3), $H^Ri$, anchor: "south")
-
-//     // --- PROJECTIONS OF v ---
-//     // Dashed lines forming the rectangular decomposition
-//     line(v-pt, IQc-v, stroke: (dash: "dashed", paint: gray))
-//     line(v-pt, Qc-v, stroke: (dash: "dashed", paint: gray))
-
-//     // Vector v
-//     line(
-//       orig, v-pt,
-//       mark: (end: "triangle", fill: main-purple),
-//       stroke: (paint: main-purple, thickness: 1.5pt)
-//     )
-//     circle(v-pt, radius: circle_radius, fill: black, stroke: none)
-//     content(v-pt, padding: 0.15, $v$, anchor: "south-west")
-
-//     // Coarse component Q_c v on range(P)
-//     content(Qc-v, padding: 0.15, $Q_c v$, anchor: "north")
-
-//     // Complement component (I - Q_c)v on y-axis
-//     content(IQc-v, padding: 0.15, $(I - Q_c)v$, anchor: "east")
-
-//     // --- DISTANCE ANNOTATION (Double-edged arrow along y-axis) ---
-//     line(
-//       (vp + 0.15, 0.1), (vp + 0.15, 3.1),
-//       mark: (start: "triangle", end: "triangle", fill: red-accent),
-//       stroke: (paint: red-accent, thickness: 0.6pt),
-//       name: "distance"
-//     )
-
-//     content(
-//       (rel: (1.5, 0), to: "distance"),
-//       text(size: 10pt)[
-//         $d_Ri (v, text(range)(P)) \ = ||(I - Q_c)v||_Ri$
-//       ],
-//       anchor: "center"
-//     )
-//   })
-// ]
-
-// #pagebreak()
-
-// $ ||E||_A^2 = 1 - 1 / K(V_c) $
-
-// This can be understood as follows: \
-// the effectiveness of a two-grids method depends on how well the coarse space can approximate the smooth error (quantified by $Z$) that escaped the smoother (quantified by $X$).
 
 == Optimal coarse space
 // show => and assume it is optimal
@@ -672,7 +508,9 @@ $
 &= 1 - 1/3lambda_(n_c + 1)(A)(2 - 1/3lambda_(n_c + 1)(A))
 $
 
-== Numerical applications: effect of S
+= Numerical applications
+
+== Effect of S
 
 #align(center)[
   #fig-smoother-error
@@ -681,13 +519,35 @@ $
 #pagebreak()
 
 #align(center)[
- #image("../../pictures/S_spectrum.png", width: 80%)
+ #image("../../pictures/plot_S_spectrum.png", width: 80%)
 ]
 
-== Numerical applications: effect of X
+== Effect of $Rb A$
 #align(center)[
- #image("../../pictures/X_opt_spectrum.png", width: 80%)
+ #image("../../pictures/plot_T_spectrum.png", width: 80%)
 ]
+
+== Effect of X
+#align(center)[
+ #image("../../pictures/plot_X_opt_spectrum.png", width: 80%)
+]
+
+== two-grid convergence
+#align(center)[
+ #image("../../pictures/plot_convergence.png", width: 80%)
+]
+
+
+== Effect of X with P = linear interpolation
+#align(center)[
+ #image("../../pictures/plot_X_spectrum.png", width: 80%)
+]
+
+== Effect of X with P = linear interpolation
+#align(center)[
+ #image("../../pictures/plot_fourier_attenuation.png", width: 80%)
+]
+
 // numerical example
 
 // Jacobi
