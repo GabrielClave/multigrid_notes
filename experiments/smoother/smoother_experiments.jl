@@ -124,6 +124,7 @@ for j in 1:n_c
     P_gmg[i,     j] = 1.0
     P_gmg[i + 1, j] = 0.5
 end
+# that is the real P, however in practice the restriction is 1/2 P^T !
 
 function get_sorted_X_eigenvalues(R::AbstractMatrix, P::AbstractMatrix)
 
@@ -156,6 +157,7 @@ end
 function get_sorted_X_eigenvalues(R::AbstractMatrix)
 
     P = build_P_opt(R)
+    R_bar = R' + R - R' * A * R
 
     Π_c = P * inv(P' * A * P) * P' * A # A-orthogonal projection onto range(P)
     X_full = (I - Π_c) * R_bar*A # n x n matrix here, acts on the full V, not just H
@@ -235,12 +237,12 @@ df_sorted_X_opt_ev = DataFrame(
 # # -------------------------------------------------------------
 # save data
 
-CSV.write("experiments/data/smoother_spectrum.csv", df_sorted_abs_ev)
-CSV.write("experiments/data/fourier_attenuation.csv", df_fourier_attenuation)
-CSV.write("experiments/data/fourier_attenuation_anorm.csv", df_fourier_attenuation_anorm)
-CSV.write("experiments/data/smoother_T_spectrum.csv", df_sorted_S_ev)
-CSV.write("experiments/data/smoother_X_spectrum.csv", df_sorted_X_ev)
-CSV.write("experiments/data/smoother_X_opt_spectrum.csv", df_sorted_X_opt_ev)
+# CSV.write("experiments/data/smoother_spectrum.csv", df_sorted_abs_ev)
+# CSV.write("experiments/data/fourier_attenuation.csv", df_fourier_attenuation)
+# CSV.write("experiments/data/fourier_attenuation_anorm.csv", df_fourier_attenuation_anorm)
+# CSV.write("experiments/data/smoother_T_spectrum.csv", df_sorted_S_ev)
+# CSV.write("experiments/data/smoother_X_spectrum.csv", df_sorted_X_ev)
+# CSV.write("experiments/data/smoother_X_opt_spectrum.csv", df_sorted_X_opt_ev)
 
 # # -------------------------------------------------------------
 # two-grid convergence
@@ -337,9 +339,10 @@ df_convergence_opt = DataFrame(
     # res_as = res_hist_as ./ res_hist_as[1],
 )
 
-CSV.write("experiments/data/two_grid_convergence_opt.csv", df_convergence_opt)
 # # -------------------------------------------------------------
 # Linear interpolation
+# # -------------------------------------------------------------
+
 
 maxiter = 25
 f = rand(n)
@@ -370,8 +373,6 @@ df_convergence = DataFrame(
     # res_as = res_hist_as ./ res_hist_as[1],
 )
 
-CSV.write("experiments/data/two_grid_convergence.csv", df_convergence)
-
 # with norm A
 
 maxiter = 25
@@ -394,6 +395,102 @@ df_convergence_normA = DataFrame(
     res_gs = res_hist_gs ./ res_hist_gs[1],
     bound_gs = bound_gs,
     # res_as = res_hist_as ./ res_hist_as[1],
+
+)
+# CSV.write("experiments/data/two_grid_convergence.csv", df_convergence)
+# CSV.write("experiments/data/two_grid_convergence_normA.csv", df_convergence)
+# CSV.write("experiments/data/two_grid_convergence_opt.csv", df_convergence_opt)
+
+# # -------------------------------------------------------------
+# 3:4 interpolation setup
+# # -------------------------------------------------------------
+
+# Coarse grid dimension for 3:4 transfer
+n_c_34 = div(3 * n, 4)
+
+# Build P_34 using continuous 1D piecewise linear interpolation
+# x_i^h = i * h,  x_j^H = j * H, with H/h = 4/3
+P_34 = zeros(n, n_c_34)
+for i in 1:n
+    # Continuous coarse coordinate corresponding to fine index i
+    j_real = (3.0 * i) / 4.0
+    j_floor = floor(Int, j_real)
+    t = j_real - j_floor
+
+    if j_floor >= 1 && j_floor <= n_c_34
+        P_34[i, j_floor] += 1.0 - t
+    end
+    if j_floor + 1 >= 1 && j_floor + 1 <= n_c_34
+        P_34[i, j_floor + 1] += t
+    end
+end
+
+# Optimal Weighted Jacobi for 3:4 coarsening (omega ~ 0.601)
+# ω_opt_34 = 1.0 / (1.0 + sin(3.0 * π / 16.0)^2)
+ω_opt_34 = 0.6
+R_wjacobi06_mat = (ω_opt_34 / 2.0) * Matrix(I, n, n)
+S_wjacobi06_mat = Matrix(I, n, n) - R_wjacobi06_mat * A
+
+# # -------------------------------------------------------------
+# Experiments with P_34 and wJ (omega ≈ 0.601)
+# # -------------------------------------------------------------
+
+# Absolute values of eigenvalues, sorted in increasing order
+df_sorted_abs_ev = DataFrame(
+    k = 1:n,
+    Jacobi = get_sorted_abs_eigenvalues(S_jacobi_mat),
+    Jacobi_true = λ_S,
+    WeightedJacobi = get_sorted_abs_eigenvalues(S_wjacobi_mat),
+    WeightedJacobi_true = λ_Sw,
+    WeightedJacobi_06 = get_sorted_abs_eigenvalues(S_wjacobi06_mat),
+    GaussSeidel = get_sorted_abs_eigenvalues(S_gs),
+    AdditiveSchwarz = get_sorted_abs_eigenvalues(S_as)
 )
 
-CSV.write("experiments/data/two_grid_convergence_normA.csv", df_convergence)
+# Unsorted Fourier mode amplification factors a(k) = ||S q_k||_2
+df_fourier_attenuation = DataFrame(
+    k = 1:n,
+    normalized_frequency = (1:n) ./ (n + 1),
+    Jacobi_attenuation = compute_mode_attenuation(S_jacobi_mat, Q),
+    WeightedJacobi_attenuation = compute_mode_attenuation(S_wjacobi_mat, Q),
+    WeightedJacobi_06_attenuation = compute_mode_attenuation(S_wjacobi06_mat, Q),
+    GaussSeidel_attenuation = compute_mode_attenuation(S_gs, Q),
+    AdditiveSchwarz_attenuation = compute_mode_attenuation(S_as, Q)
+)
+
+# Unsorted Fourier mode amplification factors a(k) = ||S q_k||_A in A-norm
+df_fourier_attenuation_anorm = DataFrame(
+    k = 1:n,
+    normalized_frequency = (1:n) ./ (n + 1),
+    Jacobi_attenuation = compute_mode_attenuation(S_jacobi_mat, Q, true),
+    WeightedJacobi_attenuation = compute_mode_attenuation(S_wjacobi_mat, Q, true),
+    WeightedJacobi_06_attenuation = compute_mode_attenuation(S_wjacobi06_mat, Q, true),
+    GaussSeidel_attenuation = compute_mode_attenuation(S_gs, Q, true),
+    AdditiveSchwarz_attenuation = compute_mode_attenuation(S_as, Q, true)
+)
+
+# abs eigenvalues of S_bar, sorted in increasing order
+df_sorted_S_ev = DataFrame(
+    k = 1:n,
+    Jacobi = get_sorted_T_bar_eigenvalues(R_jacobi_mat),
+    WeightedJacobi = get_sorted_T_bar_eigenvalues(R_wjacobi_mat),
+    WeightedJacobi_06 = get_sorted_T_bar_eigenvalues(R_wjacobi06_mat),
+    GaussSeidel = get_sorted_T_bar_eigenvalues(R_gs),
+    AdditiveSchwarz = get_sorted_T_bar_eigenvalues(R_as)
+)
+
+# Eigenvalues of X_full using P_34, sorted in increasing order
+df_sorted_X_ev_34 = DataFrame(
+    k = 1:n,
+    Jacobi = get_sorted_X_eigenvalues(R_jacobi_mat, P_34),
+    WeightedJacobi_23 = get_sorted_X_eigenvalues(R_wjacobi_mat, P_34),
+    WeightedJacobi_06 = get_sorted_X_eigenvalues(R_wjacobi06_mat, P_34),
+    GaussSeidel = get_sorted_X_eigenvalues(R_gs, P_34),
+    AdditiveSchwarz = get_sorted_X_eigenvalues(R_as, P_34)
+)
+
+CSV.write("experiments/data/df_34_smoother_spectrum.csv", df_sorted_abs_ev)
+CSV.write("experiments/data/df_34_fourier_attenuation.csv", df_fourier_attenuation)
+CSV.write("experiments/data/df_34_fourier_attenuation_anorm.csv", df_fourier_attenuation_anorm)
+CSV.write("experiments/data/df_34_smoother_T_spectrum.csv", df_sorted_S_ev)
+CSV.write("experiments/data/df_34_smoother_X_spectrum.csv", df_sorted_X_ev_34)
