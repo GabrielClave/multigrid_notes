@@ -113,15 +113,15 @@ $ B = sum_(i=1)^J P_i A_i^(-1) P_i^T $
 which is more or less an additive Schwartz preconditioner. \
 We see that when all $A_i$ are SPD, $B$ is also SPD
 
-// It can be useful to see $B$ as
-// $ B = P tilde(A)^(-1) P^T $
+It can be useful to see $B$ as
+$ B = P tilde(A)^(-1) P^T $
 
-// where $tilde(A) = "blockdiag"(A_1, A_2, dots, A_J) in bb(R)^(N times N)$ is SPD.
+where $tilde(A) = "blockdiag"(A_1, A_2, dots, A_J) in bb(R)^(N times N)$ is SPD.
 
 $ T = B A = sum_(i=1)^J P_i A_i^(-1) P_i^T A = sum_(i=1)^J T_i $
 
-== Theorem 2.3
-// Invertibility Characterization
+== Invertibility characterization
+
 Assume $A$ and all local solvers $A_i$ are SPD. The following conditions are equivalent:
 1. The space decomposition condition holds: $op("range")(P) = bb(R)^n$.
 2. $B$ is SPD on $bb(R)^n$ and $T = B A$ is non-singular.
@@ -143,17 +143,61 @@ $ x^T B x = 0 & arrow.double.l.r forall i quad P_i^T x = 0 \
 
 $
 
-== Lemma 2.4
-// Minimal Energy Splitting
+== Minimal energy decomposition
 
 If condition (A0) holds ($op("range")(P) = V$) and each $A_i$ is SPD, then for any vector $v in V$:
 $ v^T B^(-1) v = inf_(sum_(i=1)^J P_i x_i = v) sum_(i=1)^J x_i^T A_i x_i $
 
 // interpretation: there is decomposition of $v$ of "minimal local energy $(v_i,v_i)_A_i^(-1)$" and its norm is $v^T B^(-1) v$
 
-// proof ?
+The minimum is achieved for $x^* in bb(R)^N$:
+$ x^* = tilde(A)^(-1) P^T B^(-1) v $
+
+$ P x^* = P (tilde(A)^(-1) P^T B^(-1) v) = (P tilde(A)^(-1) P^T) B^(-1) v = B B^(-1) v = v $
+
+$ (x^*)^T tilde(A) x^* &= (tilde(A)^(-1) P^T B^(-1) v)^T tilde(A) (tilde(A)^(-1) P^T B^(-1) v) \
+&= v^T B^(-1) (P tilde(A)^(-1) P^T) B^(-1) v \
+&= v^T B^(-1) v $
+
+For any $x in bb(R)^N$ satisfying $P x = v$. 
+
+We decompose $x = x^* + w$.
+$ P x = v & arrow.double P x^* + P w = v \
+& => P w = 0 \
+& => w in op("ker")(P) $
+
+Expanding $x^T tilde(A) x$:
+$ x^T tilde(A) x &= (x^* + w)^T tilde(A) (x^* + w) \
+&= (x^*)^T tilde(A) x^* + 2 w^T tilde(A) x^* + w^T tilde(A) w $
+
+We have $ w^T tilde(A) x^* = 0$ :
+$ w^T tilde(A) x^* = w^T tilde(A) (tilde(A)^(-1) P^T B^(-1) v) = w^T P^T B^(-1) v = (P w)^T B^(-1) v = 0 $
+
+And because $tilde(A)$ is SPD, $w^T tilde(A) w >= 0$ for all $w$:
+
+$ x^T tilde(A) x >= v^T B^(-1) v $
 
 == Spectral Bound
 
 The minimum eigenvalue of $T = B A$ satisfies:
 $ 1 / (lmin (B A)) = sup_(v != 0) inf_(sum_(i=1)^J P_i x_i = v) frac(sum_(i=1)^J x_i^T A_i x_i, v^T A v) $
+
+= Notes
+
+== Lemma 2.4
+
+In the paper we have $ (T^(-1) v, v) = inf_(sum v_i = v) sum_(i=1)^J (T_i^(-1) v_i, v_i) $
+
+In matrix algebra, the local iteration matrix $T_i = P_i A_i^(-1) P_i^T A$ 
+is not symmetric under the standard euclidean inner product ($u^T v$). \
+it is self-adjoint under the $A$-energy inner product $( u, v )_A = v^T A u$
+
+In $bb(R)^n$, $T_i = P_i A_i^(-1) P_i^T A in bb(R)^(n times n)$ has rank $n_i < n$, making $T_i$ singular as an $n times n$ matrix.
+
+Restricted to the subspace $V_i = op("range")(P_i)$,$quad T_i|_V_i$ is a bijection. 
+
+for any $v_i = P_i x_i in V_i$ ($x_i in bb(R)^(n_i)$), the equation $T_i w = v_i$ for $w = P_i y_i in V_i$ yields:
+
+$ P_i A_i^(-1) P_i^T A (P_i y_i) = P_i x_i ==> y_i = (P_i^T A P_i)^(-1) A_i x_i $
+
+$ (T_i^(-1) v_i, v_i)_A = v_i^T A w = (P_i x_i)^T A [P_i (P_i^T A P_i)^(-1) A_i x_i] = x_i^T A_i x_i $
