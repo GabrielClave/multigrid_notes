@@ -72,7 +72,7 @@
       anchor: "south-east"
     )
 
-    // Double-headed arrow / edge-line for W = N^\perp_A below the main drawing
+    // Double-headed arrow / edge-line for W = N^perp_A below the main drawing
     let yW = y0 - (2 * margin)
 
     line(
@@ -118,7 +118,6 @@
     import draw: *
 
     let circle_radius = 0.06
-    let margin = 1
     let main-purple = rgb("#7570b3")
     let red-accent  = rgb("#e04040")
 
@@ -127,56 +126,61 @@
     let eh = 5.5
     let ehs = 0.9
     let ep = 7.5
-    let eps = 5
-    let e-pt = (ep, eh)          // Initial error vector e
-    let e-H = (0, eh)          // High-frequency component e_H
-    let e-P = (ep, 0)            // Coarse-space component e_P
-    let e-smoothed = (eps, ehs)   // Error after smoother: (I - T_bar) e
-    let e-H-smoothed = (0, ehs) // Reduced high-frequency component (I - X) e_H
-    let e-P-smoothed = (eps, 0) // Slightly reduced coarse component
-    let midpoint = (0, (ehs+eh)/2)
+    let eps = 2.0             // Final x-coordinate
+    let e-pt = (ep, eh)       // Initial error vector e
+    let e-H = (0, eh)         // High-frequency component e_H = (I - P_c)e
+    let e-P = (ep, 0)         // Coarse-space component e_P = P_c e
+    
+    let e-H-smoothed = (0, ehs)   // (I - X) e_H = remaining error on H^A
+    let e-final = (eps, ehs)      // Error after smoothing step at (2.0, 0.9)
+    let e-P-final = (eps, 0)      // Remaining coarse component
+    
+    let midpoint-H = (0, (ehs + eh) / 2)
 
     // Set coordinate system and axes
-    line((-0.5, 0), (10, 0), stroke: 1pt, name: "x-axis")
+    line((-0.5, 0), (9, 0), stroke: 1pt, name: "x-axis")
     line((0, -0.5), (0, 7), stroke: 1pt, name: "y-axis")
 
-    content((10.3, 0), $text(range)(P)$, anchor: "north-west")
+    content((9.3, 0), $range(P)$, anchor: "north-west")
     content((0, 7.3), $H^A$, anchor: "east")
 
-    // --- INITIAL STATE e ---
-    // Dashed projection lines for e
+    // --- INITIAL STATE e & DECOMPOSITION ---
+    // Dashed projection lines
     line(e-pt, e-H, stroke: (dash: "dashed", paint: gray))
     line(e-pt, e-P, stroke: (dash: "dashed", paint: gray))
 
-    // Projections of e on axes
-    // circle(e-H, radius: 0.06, fill: blue, stroke: none)
-    content(e-H, padding: 0.15, $e_H$, anchor: "east")
-    // circle(e-P, radius: 0.06, fill: blue, stroke: none)
-    content(e-P, padding: 0.15, $e_P$, anchor: "north")
-
-    // --- STATE AFTER SMOOTHER (I - Tb)e ---
-    // Dashed projection lines for smoothed error
-    line(e-smoothed, e-H-smoothed, stroke: (dash: "dashed", paint: gray))
-    line(e-smoothed, e-P-smoothed, stroke: (dash: "dashed", paint: gray))
-
-    // Vector (I - Tb)e
-    line(e-pt, e-smoothed, mark: (end: "triangle", fill: main-purple), stroke: (paint: main-purple, thickness: 1.5pt)) // effect of smoother
-    circle(e-smoothed, radius: 0.06, fill: black, stroke: none)
-    content(e-smoothed, padding: 0.15, $(I - Rb A)e$, anchor: "south-east")
-
-    // Projections of smoothed error on axes
-    // circle(e-H-smoothed, radius: 0.06, fill: rgb("d9534f"), stroke: none)
-    content(midpoint, padding: 0.15, $(I - Pi_c)Rb A e_H\ = X e_H$, anchor: "east")
-    // circle(e-P-smoothed, radius: 0.06, fill: rgb("d9534f"), stroke: none)
-
-    // Action of smoother on H^A component (reduction arrow)
-    line((0, eh), (0, ehs), mark: (end: "triangle", fill: red-accent), stroke: (paint: red-accent, thickness: 1pt))
-    content(midpoint, padding: 0.15, text(size: 14pt, fill: red-accent)[$text("Smoother action on \n high frequency error")$], anchor: "west")
-
-    // content(e-H-smoothed, padding: 0.15, $(I - Pi_c)(I - Rb A) e_H$, anchor: "east")
-    // Vector e
-    circle(e-pt, radius: 0.06, fill: black, stroke: none)
+    circle(e-pt, radius: circle_radius, fill: black, stroke: none)
     content(e-pt, $e$, padding: 0.15, anchor: "south-west")
+
+    // circle(e-H, radius: circle_radius, fill: black, stroke: none)
+    content(e-H, padding: 0.15, $e_H = (I - Pi_c) e$, anchor: "east")
+    
+    circle(e-P, radius: circle_radius, fill: black, stroke: none)
+    content(e-P, padding: 0.15, $e_P = Pi_c e$, anchor: "north")
+
+    // --- 1ST PURPLE ARROW: Projection e -> e_H ---
+    line(e-pt, e-H, stroke: (paint: main-purple, thickness: 1.5pt))
+
+    // --- 2ND PURPLE ARROW: Smoother action from e_H to final error ---
+    line(e-H, e-final, mark: (end: "triangle", fill: main-purple), stroke: (paint: main-purple, thickness: 1.5pt))
+
+    // Dashed projections for final error
+    line(e-final, e-H-smoothed, stroke: (dash: "dashed", paint: gray))
+    line(e-final, e-P-final, stroke: (dash: "dashed", paint: gray))
+
+    // --- RED ARROW ALONG H^A: Action of smoother on e_H ---
+    line(e-H, e-H-smoothed, mark: (end: "triangle", fill: red-accent), stroke: (paint: red-accent, thickness: 1.5pt))
+    // circle(e-H-smoothed, radius: circle_radius, fill: red-accent, stroke: none)
+    content(e-H-smoothed, padding: 0.15, $(I - X) e_H$, anchor: "east")
+
+    content(midpoint-H, padding: 0.2, text(size: 11pt, fill: red-accent)[
+      Smoother effect on $H^A$ \
+      $X e_h = (I - Pi_c) Rb A e_H$
+    ], anchor: "east")
+
+    circle(e-final, radius: circle_radius, fill: black, stroke: none)
+    content(e-final, padding: 0.15, $(I - Rb A)(I - Pi_c) e$, anchor: "west")
+
   })
 )
 
@@ -200,7 +204,7 @@
     let orig = (0, 0)
     let v-pt = (vp, vh)            // Vector v in V
     let Qc-v = (vp, 0)             // Projection Q_c v on range(P)
-    let IQc-v = (0, vh)            // Projection (I - Q_c) v on W_P^\perp_A
+    let IQc-v = (0, vh)            // Projection (I - Q_c) v on W_P^perp_A
 
     // Axes
     line((-0.5, 0), (5.5, 0), stroke: 1pt, name: "x-axis")
@@ -265,7 +269,7 @@
 //     let orig = (0, 0)
 //     let w-pt = (3.5, 3.2)           // Vector w in W
 //     let w-P = (3.5, 0)             // Projection onto W_P (Pi_c w)
-//     let w-H = (0, 3.2)             // Projection onto W_P^\perp_A ((I - Pi_c) w)
+//     let w-H = (0, 3.2)             // Projection onto W_P^perp_A ((I - Pi_c) w)
 //     let v-P = (5, 0)             // Test vector v_P in W_P
 
 //     // Axes
