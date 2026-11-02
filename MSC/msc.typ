@@ -26,11 +26,14 @@
 #let Ri = $overline(R)^(-1)$
 #let Rb = $overline(R)$
 #let Tb = $overline(T)$
+#let Tbi = $overline(T_i)$
 #let Sb = $overline(S)$
 #let lm = $lambda_max$
+#let Ti = $T_i$
 #let lk = $lambda_k$
 #let lmin = $lambda_min$
 #let tb(x) = $tilde(bold(#x))$
+#let iff = $arrow.l.r.double.long$
 
 // Document Title & Metadata
 #align(center)[
@@ -50,13 +53,14 @@ Let $V = bb(R)^n$. We consider the linear system:
 $ A u = f $
 where $A in bb(R)^(n times n)$ is symmetric positive definite
 
-The space $V = bb(R)^n$ is decomposed into $J$ subspaces $V_1, dots, V_J subset bb(R)^n$, where each $V_i$ has dimension $n_i <= n$. We have:
+The space $V$ is decomposed into $J$ subspaces $V_1, dots, V_J subset bb(R)^n$, where each $V_i$ has dimension $n_i <= n$. We have:
 $ V = sum_(i = 1)^J V_i $
 which means each $v in V$ can be decomposed into a (non-unique) $v = sum_i v_i quad v_i in V_i$
 
 == Prolongation Matrices
 
-$P_i in bb(R)^(n times n_i), quad P_i : bb(R)^(n_i) arrow bb(R)^n$ is a full column-rank matrix whose columns form a basis of $V_i$, representing the prolongation  operator from $bb(R)^(n_i)$ into $bb(R)^n$. \
+$P_i in bb(R)^(n times n_i), quad P_i : bb(R)^(n_i) arrow bb(R)^n$ is a full column-rank matrix whose columns form a basis of $V_i$, 
+representing the prolongation  operator from $V_i = bb(R)^(n_i)$ into $V = bb(R)^n$. \
 The corresponding restriction operator is $P_i^T in bb(R)^(n_i times n)$.
 
 The global space decomposition condition (A0) takes the block-matrix form:
@@ -107,10 +111,11 @@ $
   &= ( I - T ) e^k
 $
 
-We define $B in bb(R)^(n times n)$:
-$ B = sum_(i=1)^J P_i A_i^(-1) P_i^T $
+We define $B,T in bb(R)^(n times n)$:
+$ B = sum_(i=1)^J P_i A_i^(-1) P_i^T \
+T = B A $
 
-which is more or less an additive Schwartz preconditioner. \
+$B$ is more or less an additive Schwartz preconditioner. \
 We see that when all $A_i$ are SPD, $B$ is also SPD
 
 It can be useful to see $B$ as
@@ -150,6 +155,8 @@ $ v^T B^(-1) v = inf_(sum_(i=1)^J P_i x_i = v) sum_(i=1)^J x_i^T A_i x_i $
 
 // interpretation: there is decomposition of $v$ of "minimal local energy $(v_i,v_i)_A_i^(-1)$" and its norm is $v^T B^(-1) v$
 
+Proof:
+
 The minimum is achieved for $x^* in bb(R)^N$:
 $ x^* = tilde(A)^(-1) P^T B^(-1) v $
 
@@ -182,6 +189,126 @@ $ x^T tilde(A) x >= v^T B^(-1) v $
 The minimum eigenvalue of $T = B A$ satisfies:
 $ 1 / (lmin (B A)) = sup_(v != 0) inf_(sum_(i=1)^J P_i x_i = v) frac(sum_(i=1)^J x_i^T A_i x_i, v^T A v) $
 
+= Convergence
+
+We want to prove that
+$
+||E||_A < 1
+$
+
+We assume
+$
+  ||I - T_i||_A < 1 \
+  iff forall v in V, (T_i v, T_i v)_A < 2(T_i v, v)_A
+$
+Meaning there is $omega in [0,2],$
+$
+  forall v in V, (T_i v, T_i v)_A <= omega(T_i v, v)_A
+$
+
+== Error norm reduction
+
+At step $i$, the error norm reduction is given by:
+$
+  ||(I - Ti)v||_i^2 &= ((I - T_i) v, (I - T_i) v)_A \
+  &= ((I - T_i)^*(I - T_i) v, v)_A
+$
+
+where $M^*$ is the adjoint of $M$ with respect to $A$ \
+We have:
+$
+  (I - T_i)^*(I - T_i) &= I - (Ti + Ti^* - Ti^*Ti) \
+  & = I - Tbi
+$
+$
+  Tbi = Ti + Ti^* - Ti^*Ti
+$
+
+$
+  T_i^* &= A^(-1) Ti^T A \
+  &= A^(-1) (P_i A_i^(-1) P_i^T A)^T A \
+  &= P_i (A_i^(-1))^T P_i^T A
+$
+
+which we can think of the subspace correction applying the transpose of the local solver
+
+and so:
+$
+    ||(I - Ti)v||_A^2 &= ((I - Tbi) v, v)_A \
+  &= ||v||_A^2 - (Tbi v,v)_A
+$
+
+$(Tbi v,v)_A$ quantifies the norm reduction of the subspace correction
+
+== range and kernel identities
+
+$
+  Ti = P_i A_i^(-1) P_i^T A \
+  Ti^* = P_i A_i^(-T) P_i^T A \
+  Tbi = Ti + Ti^* - Ti^*Ti \
+$
+
+$A_i$ is non-singular, $P_i$ is surjective and $range(P_i) = V_i$
+
+We have
+$
+  range(Ti) = range(Ti^*) = V_i \
+  range(Tbi) subset V_i
+$
+
+$
+  x in ker(Ti) &iff P_i A_i^(-1) P_i^T A x = 0 \
+  & iff x in ker(P_i^T A) = V_i^(perp_A)
+$
+$
+  ker(Ti) = ker(Ti^*) = V_i^(perp_A) \
+  ker(Tbi) subset V_i^(perp_A)
+$
+
+and from
+$
+  & ||(I - Ti)v||_A^2 = ||v||_A^2 - (Tbi v,v)_A iff (Tbi v,v)_A = ||v||_A^2 - ||(I - Ti)v||_i^2
+$
+
+using $||Ti v||^2_A <= omega(T_i v, v)_A$
+
+$
+  (Tbi v,v)_A &= 2(T_i v, v)_A - ||Ti v||^2_A \
+  (Tbi v,v)_A &>= (2 - omega)/omega ||Ti v||^2_A  
+$
+which implies $ker(Ti) = V_i^(perp_A) subset ker(Tbi)$
+
+As a result:
+$
+  ker(Tbi) = V_i^(perp_A) \
+  range(Tbi) = V_i
+$
+
+== Bounding the operator norm
+
+We quantify successive error norm reduction using $Tbi$ \
+At step 1:
+$
+  ||(I - T_1)v||_A^2 = ||v||_A^2 - (Tb_1 v,v)_A  
+$
+
+At step 2:
+$
+  ||(I - T_2)(I - T_1)v||_A^2 = ||v||_A^2 - (Tb_1 v,v)_A - (Tb_2 (I - T_1)v, (I - T_1)v)_A
+$
+
+we introduce:
+$
+  E_i = (I - T_i)E_(i-1) \
+  E_0 = I \
+  E_J = E
+$
+
+$
+  ||E v||_A^2 = ||v||_A^2 - sum_(i = 1)^(J) (Tb_i E_(i-1) v, E_(i-1)v)_A \
+  // ||v||_A^2 - ||E v||_A^2 = sum_(i = 1)^(J) (Tb_i E_(i-1) v, E_(i-1)v)_A
+$
+
 = Notes
 
 == Lemma 2.4
@@ -198,6 +325,7 @@ Restricted to the subspace $V_i = op("range")(P_i)$,$quad T_i|_V_i$ is a bijecti
 
 for any $v_i = P_i x_i in V_i$ ($x_i in bb(R)^(n_i)$), the equation $T_i w = v_i$ for $w = P_i y_i in V_i$ yields:
 
-$ P_i A_i^(-1) P_i^T A (P_i y_i) = P_i x_i ==> y_i = (P_i^T A P_i)^(-1) A_i x_i $
+$ P_i A_i^(-1) P_i^T A (P_i y_i) = P_i x_i ==> y_i & = (P_i^T A P_i)^(-1) A_i x_i \
+&= A_(i, "exact")^(-1) A_i x_i $
 
 $ (T_i^(-1) v_i, v_i)_A = v_i^T A w = (P_i x_i)^T A [P_i (P_i^T A P_i)^(-1) A_i x_i] = x_i^T A_i x_i $
