@@ -193,7 +193,7 @@
 
     // Projections of smoothed error on axes
     // circle(e-H-smoothed, radius: 0.06, fill: rgb("d9534f"), stroke: none)
-    content(midpoint, padding: 0.15, $(I - Pi_c)R A e_H\ = "important part"$, anchor: "east")
+    content(midpoint, padding: 0.15, $(I - Pi_c)R A e\ = "important part"$, anchor: "east")
     // circle(e-P-smoothed, radius: 0.06, fill: rgb("d9534f"), stroke: none)
 
     // Action of smoother on H^A component (reduction arrow)

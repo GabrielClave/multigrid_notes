@@ -628,7 +628,7 @@ In general we have
 $
   ||E^k||_A <= ||E||_A^k = (1 - lmin(X))^k
 $
-asymptotically, we know that
+and asymptotically, we know that
 $
   lim_(n arrow infinity) ||E^k||_A^(1/k) = rho(E)
 $
@@ -655,10 +655,16 @@ with ${mu_j , q_j}$ the eigenpairs of $Rb A$ in increasing order, we use $range(
 The worst direction in V that limits the convergence is $ q_(n_c + 1) = "arg"max_(v in V \ ||v||_A = 1) ||E v||_A $
 // is that true ?
 
+// $
+//   (q_(n_c + 1), mu_(n_c + 1)) "is an eigenpair of" Rb A & arrow.double (q_(n_c + 1), 1 - mu_(n_c + 1)) "is an eigenpair of" I - Rb A = Sb = S^2 \
+//   & arrow.double (q_(n_c + 1), plus.minus sqrt(1 - mu_(n_c + 1))) "is an eigenpair of" S = I - R A 
+// $ // it is actually the other way around ?
+
 $
-  (q_(n_c + 1), mu_(n_c + 1)) "is an eigenpair of" Rb A & arrow.double (q_(n_c + 1), 1 - mu_(n_c + 1)) "is an eigenpair of" I - Rb A = Sb = S^2 \
-  & arrow.double (q_(n_c + 1), plus.minus sqrt(1 - mu_(n_c + 1))) "is an eigenpair of" S = I - R A 
-$
+  (q_(n_c + 1), plus.minus sqrt(1 - mu_(n_c + 1))) "is an eigenpair of" S = I - R A   & arrow.double (q_(n_c + 1), 1 - mu_(n_c + 1)) "is an eigenpair of" I - Rb A = Sb = S^2 \
+  & arrow.double (q_(n_c + 1), mu_(n_c + 1)) "is an eigenpair of" Rb A
+$ // chicken and egg ?
+// what we do is: from q_(n_c + 1) eigenvector of Rb A, it is not necessarily an eigenvector of S, but we can chose w in Vect(q_(n_c + 1)) that is
 
 since $q_(n_c + 1) in H$, we have
 
@@ -678,6 +684,9 @@ $
   ||E^k q_(n_c + 1)||_A & = (1 - mu_(n_c + 1) )^(k/2) \
   & = ||E||_A^k 
 $
+
+// We understand why rho(E) = ||E||_A
+// prove it
 
 // non-optimal P
 
