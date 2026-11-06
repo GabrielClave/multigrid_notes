@@ -1,5 +1,6 @@
 using LinearAlgebra
 using DataFrames
+using Plots
 
 # -----------------------------------------------------------------------------
 # 1. Structure Definition & Constructors
@@ -80,7 +81,7 @@ function tg_spectrum(tg::TwoGridOperator, op::Symbol; absolute::Bool=true, sorte
     M = getfield(tg, op)
     evs, evect = eigen(M)
     condv = cond(evect)
-    if (maximum(imag(evs)) < tol) println("complex eigenvalues, condition number of V: $condv") end
+    if (maximum(abs.(imag(evs))) > tol) println("complex eigenvalues, condition number of V: $condv") end
     if absolute
         evs = abs.(evs)
     end
@@ -88,11 +89,11 @@ function tg_spectrum(tg::TwoGridOperator, op::Symbol; absolute::Bool=true, sorte
 end
 
 """
-    tg_spectrum_dataframe(tgs::AbstractDict{String, <:TwoGridOperator}, op::Symbol; kwargs...)
+    tg_spectrum(tgs::AbstractDict{String, <:TwoGridOperator}, op::Symbol; kwargs...)
 
 Computes the spectrum of `op` across a collection of operators and returns a DataFrame.
 """
-function tg_spectrum_dataframe(tgs::AbstractDict{String, <:TwoGridOperator}, op::Symbol; kwargs...)
+function tg_spectrum(tgs::AbstractDict{String, <:TwoGridOperator}, op::Symbol; kwargs...)
     n = size(first(values(tgs)).A, 1) # dimension
     df = DataFrame(k = 1:n)
     for (name, tg) in tgs
@@ -129,7 +130,7 @@ end
 Runs the two-grid cycle and returns the normalized residual history.
 """
 function solve(tg::TwoGridOperator, f::AbstractVector, v0::AbstractVector;
-               maxiter::Int=25, tol::Float64=1e-12, normA::Bool=false)
+               maxiter::Int=25, tol::Float64=1e-11, normA::Bool=false)
     v = copy(v0)
     n = length(f)
     r = f .- tg.A * v
@@ -163,15 +164,118 @@ function solve(tg::TwoGridOperator, f::AbstractVector, v0::AbstractVector;
 end
 
 """
-    solve_dataframe(tgs::AbstractDict{String, <:TwoGridOperator}, f, v0; maxiter=25, normA=false)
+    solve(tgs::AbstractDict{String, <:TwoGridOperator}, f, v0; maxiter=25, normA=false)
 
 Runs two-grid solves across a collection of operators starting from the same initial guess.
 """
-function solve_dataframe(tgs::AbstractDict{String, <:TwoGridOperator}, f::AbstractVector, v0::AbstractVector;
-                         maxiter::Int=25, normA::Bool=false)
-    df = DataFrame(k = 1:maxiter)
-    for (name, tg) in tgs
-        df[!, name] = solve(tg, f, v0; maxiter=maxiter, normA=normA)
+function solve(tgs::AbstractDict{String, <:TwoGridOperator}, f::AbstractVector, v0::AbstractVector;
+               maxiter::Int=25, kwargs...)
+    keys_vec = collect(keys(tgs))
+    n_ops = length(keys_vec)
+    
+    # Store histories in a matrix padded with missing values
+    mat = Matrix{Union{Float64, Missing}}(missing, maxiter, n_ops)
+    max_len = 0
+
+    for (j, name) in enumerate(keys_vec)
+        hist = solve(tgs[name], f, v0; maxiter=maxiter, kwargs...)
+        len = length(hist)
+        mat[1:len, j] = hist
+        max_len = max(max_len, len)
     end
+
+    # Trim unused rows up to the maximum iteration reached across all solvers
+    df = DataFrame(k = 1:max_len)
+    for (j, name) in enumerate(keys_vec)
+        df[!, name] = mat[1:max_len, j]
+    end
+
     return df
+end
+
+# -----------------------------------------------------------------------------
+# 4. Quick Plotting Utility Functions
+# -----------------------------------------------------------------------------
+
+"""
+    plot_spectrum(tg::TwoGridOperator, op::Symbol; kwargs...)
+    plot_spectrum(tgs::AbstractDict{String, <:TwoGridOperator}, op::Symbol; kwargs...)
+
+Plots the eigenvalue distribution of operator `op` (`:S`, `:T_bar`, or `:X`).
+- Scatter plot for a single operator.
+- Line/scatter plot for a dictionary of operators.
+"""
+function plot_spectrum(tg::TwoGridOperator, op::Symbol; kwargs...)
+    evs = tg_spectrum(tg, op; kwargs...)
+    return scatter(
+        1:length(evs), evs,
+        xlabel = "Index k",
+        ylabel = "|λ_k|",
+        title = "Spectrum of $op",
+        legend = false,
+        markersize = 1,
+        markerstrokewidth = 0
+    )
+end
+
+function plot_spectrum(tgs::AbstractDict{String, <:TwoGridOperator}, op::Symbol; kwargs...)
+    df = tg_spectrum(tgs, op; kwargs...)
+    colnames = filter(!=("k"), names(df))
+    
+    p = plot(
+        xlabel = "Index k",
+        ylabel = "|λ_k|",
+        title = "Spectrum Comparison ($op)",
+        legend = :topleft
+    )
+    
+    for name in colnames
+        plot!(p, df.k, df[!, name], label = name, lw = 1.5, ms = 1)
+    end
+    
+    return p
+end
+
+"""
+    plot_history(tg::TwoGridOperator, f, v0; kwargs...)
+    plot_history(tgs::AbstractDict{String, <:TwoGridOperator}, f, v0; kwargs...)
+
+Plots relative residual reduction vs. iteration number on a logarithmic scale.
+"""
+function plot_history(tg::TwoGridOperator, f::AbstractVector, v0::AbstractVector; kwargs...)
+    res_hist = solve(tg, f, v0; kwargs...)
+    println("$(size(res_hist)) iterations")
+    return plot(
+        0:(length(res_hist)-1), res_hist,
+        yscale = :log10,
+        xlabel = "Iteration",
+        ylabel = "Relative Residual",
+        title = "Two-Grid Convergence",
+        legend = false,
+        lw = 2,
+        ms = 1,
+        markerstrokewidth = 0
+    )
+end
+
+function plot_history(tgs::AbstractDict{String, <:TwoGridOperator}, f::AbstractVector, v0::AbstractVector; kwargs...)
+    df = solve(tgs, f, v0; kwargs...)
+    colnames = filter(!=("k"), names(df))
+    
+    p = plot(
+        yscale = :log10,
+        xlabel = "Iteration",
+        ylabel = "Relative Residual",
+        title = "Two-Grid Convergence Comparison",
+        legend = :topright
+    )
+    
+    for name in colnames
+        # Drop trailing NaN values if iterations stopped early
+        hist = skipmissing(df[!, name]) |> collect
+        hist = filter(!isnan, hist)
+        plot!(p, 0:(length(hist)-1), hist, label = name, lw = 2, ms = 3)
+    end
+    
+    return p
 end
