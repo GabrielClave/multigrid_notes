@@ -192,7 +192,7 @@ plot2_combined = (
     )
 )
 
-plot2_combined.save("../pictures/plot2_real_smoothers.png", dpi=300)
+# plot2_combined.save("../pictures/plot2_real_smoothers.png", dpi=300)
 
 # 2. Build Plot 3
 plot3 = (
@@ -245,5 +245,4 @@ plot3 = (
 )
 
 # 3. Save
-plot3.save("plot3_two_cycles.png", dpi=300)
-print("Saved plot3_two_cycles.png")
+plot3.save("../pictures/plot_real_smoothers.png", dpi=300)

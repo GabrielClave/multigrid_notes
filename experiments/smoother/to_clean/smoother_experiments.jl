@@ -7,6 +7,8 @@ using DataFrames
 
 n = 501
 n_c = 250
+n = 51
+n_c = 25 # for GS condition number
 
 # 1D Laplacian
 A = SymTridiagonal(2.0 * ones(n), -1.0 * ones(n - 1))
@@ -43,7 +45,60 @@ S_wjacobi_mat = Matrix(I, n, n) - (1.0/3) * A
 # Gauss-Seidel
 D_L = LowerTriangular(A)
 R_gs = inv(D_L)
-S_gs = I - R_gs*A
+S_gs = Matrix(I, n, n) - R_gs*A
+
+evs, evect = eigen(S_gs)
+maximum(imag(evs)) # woops
+cond(evect) # 1e20
+
+using LinearAlgebra
+using DataFrames
+
+n = 501
+
+# 1. Exact Gauss-Seidel spectrum via Jacobi squaring
+k = 1:n
+λ_A = [4.0 * sin(i * π / (2 * (n + 1)))^2 for i in k]
+λ_S_jacobi = 1.0 .- 0.5 .* λ_A
+λ_gs_exact = sort(λ_S_jacobi .^ 2)
+λ_gs_exact = sort([cos( i * pi / (n+1))^2 for i in k])
+
+err_real_abs = norm(λ_gs .- λ_gs_exact, Inf)
+err_abs      = norm(λ_gs_abs .- λ_gs_exact, Inf)
+
+println("Max error  ||abs(real(evs)) - exact||_∞ : ", err_real_abs)
+println("Max error  ||abs(evs)       - exact||_∞ : ", err_abs)
+
+# 2. Numerical computation using non-symmetric lapack solver on S_gs
+A = SymTridiagonal(2.0 * ones(n), -1.0 * ones(n - 1))
+D_L = LowerTriangular(Matrix(A))
+S_gs = Matrix(I, n, n) - D_L \ Matrix(A)
+
+evs_raw = eigen(S_gs).values
+
+# Projected vs Naive complex magnitude
+λ_gs_real_abs = sort(abs.(real.(evs_raw)))
+λ_gs_abs      = sort(abs.(evs_raw))
+
+# 3. Print error metrics
+err_real_abs = norm(λ_gs_real_abs .- λ_gs_exact, Inf)
+err_abs      = norm(λ_gs_abs .- λ_gs_exact, Inf)
+
+println("Max error  ||abs(real(evs)) - exact||_∞ : ", err_real_abs)
+println("Max error  ||abs(evs)       - exact||_∞ : ", err_abs)
+
+# 4. Display comparison DataFrame snippet
+df_comp = DataFrame(
+    k = 1:n,
+    Exact = λ_gs_exact,
+    Abs_Real = λ_gs_real_abs,
+    Abs_Complex = λ_gs_abs,
+    Err_Real = abs.(λ_gs_real_abs .- λ_gs_exact),
+    Err_Complex = abs.(λ_gs_abs .- λ_gs_exact)
+)
+
+println("\nTop 5 eigenvalues near spectral radius:")
+println(last(df_comp, 5))
 
 # Additive Schwarz
 function build_additive_schwarz(A, d::Int, overlap::Int)
@@ -237,7 +292,7 @@ df_sorted_X_opt_ev = DataFrame(
 # # -------------------------------------------------------------
 # save data
 
-# CSV.write("experiments/data/smoother_spectrum.csv", df_sorted_abs_ev)
+CSV.write("experiments/data/smoother_spectrum.csv", df_sorted_abs_ev)
 # CSV.write("experiments/data/fourier_attenuation.csv", df_fourier_attenuation)
 # CSV.write("experiments/data/fourier_attenuation_anorm.csv", df_fourier_attenuation_anorm)
 # CSV.write("experiments/data/smoother_T_spectrum.csv", df_sorted_S_ev)

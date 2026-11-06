@@ -635,4 +635,66 @@ plot_convergence = (
 
 # Display or save plot
 plot_convergence
-plot_convergence.save("../../pictures/plot_convergence.png", dpi=300)
+# plot_convergence.save("../../pictures/plot_convergence.png", dpi=300)
+
+# -------------------------------------------------------------
+# Eigenvalues of S = I - RA for Weighted Jacobi only
+# -------------------------------------------------------------
+
+# 1. Load the spectrum data
+df_spec_raw = pd.read_csv('../data/smoother_spectrum.csv')
+
+# Normalize the index axis to [0, 1] for scale invariance
+if 'normalized_index' not in df_spec_raw.columns:
+    df_spec_raw['normalized_index'] = df_spec_raw['k'] / df_spec_raw['k'].max()
+
+# 2. Reshape and filter strictly for Weighted Jacobi
+df_spec_plot = df_spec_raw.melt(
+    id_vars=['k', 'normalized_index'],
+    value_vars=['WeightedJacobi'],
+    var_name='Smoother',
+    value_name='Eigenvalue_Magnitude'
+)
+
+# Clean up display names
+smoother_labels = {
+    'WeightedJacobi': 'Weighted Jacobi',
+}
+df_spec_plot['Smoother'] = df_spec_plot['Smoother'].map(smoother_labels)
+
+# 3. Custom color palette for single smoother + prediction
+colors = {
+    'Weighted Jacobi': '#C298BC',              # Amber / Sandy
+}
+
+# Optional: Set discrete linetype mapping if you want predicted to be dashed
+linetypes = {
+    'Weighted Jacobi': 'solid',
+}
+
+# 4. Generate plot
+n = len(df_spec_raw)
+
+plot_spec = (
+    ggplot(df_spec_plot, aes(x='normalized_index', y='Eigenvalue_Magnitude', color='Smoother', linetype='Smoother'))
+    + geom_line(size=1.1, alpha=0.85)
+    + geom_hline(yintercept=1.0, linetype='dashed', color="#4e4774", size=0.8) # Convergence boundary |λ| = 1
+    + scale_color_manual(values=colors)
+    + scale_linetype_manual(values=linetypes)
+    + labs(
+        x='Normalized Eigenvalue Index',
+        y='Eigenvalue Magnitude |λ(S)|',
+        title='Spectrum of S = I - BA (Weighted Jacobi)',
+        subtitle=f'1D Laplacian | n = {n}'
+    )
+    + theme_minimal()
+    + theme(
+        figure_size=(9, 5),
+        legend_position='right',
+        plot_background=element_rect(fill=bg_color, color=bg_color),
+    )
+)
+
+# Display or save plot
+plot_spec
+plot_spec.save("../../pictures/plot_J_spectrum.png", dpi=300)
