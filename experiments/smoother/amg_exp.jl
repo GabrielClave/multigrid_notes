@@ -1,16 +1,21 @@
 using LinearAlgebra
 using CSV
+using AlgebraicMultigrid
+using SparseArrays
 
 include("twoGrid.jl")
 include("twoGrid_helpers.jl")
+
+# -----------------------------------------------------------------------------
+# Problem & Operator Setup
+# -----------------------------------------------------------------------------
 
 n = 501
 n_c = 250
 ndomain = 10
 overlap = 10
 
-A = build_1d_laplacian(n)
-λ_A, Q = build_fourier_basis(n)
+A = SparseMatrixCSC(build_1d_laplacian(n))
 
 # Smoothers (R)
 R_j         = 0.5 * Matrix(I, n, n)
@@ -23,9 +28,24 @@ S_as = I - R_as*A
 S_wJ = I - R_wJ*A
 
 # Transfer operators (P)
+# geometric
 P_gmg = build_P_gmg(n, n_c)
 
+#algebraic
+# 1. Classical Ruge–Stüben AMG
+ml_rs = ruge_stuben(A)
+P_rs = ml_rs.levels[1].P
+
+# 2. Smoothed Aggregation AMG
+ml_sa = smoothed_aggregation(A)
+P_sa = ml_sa.levels[1].P
+
+#"un-sparse" A
+A = Matrix(A)
+
+# -----------------------------------------------------------------------------
 # "randomized" P experiment
+# -----------------------------------------------------------------------------
 
 # build n x n_c random matrix V
 V = rand(n, n_c)
@@ -103,4 +123,34 @@ plot_spectrum(tgs_wJ, :X)
 plot_history(tgs_wJ, rand(n), zeros(n))
 
 df_rand = tg_spectrum(tgs_wJ, :X)
-CSV.write("experiments/data/smoother_X_spectrum_Jacobi_rand.csv", df_rand)
+# CSV.write("experiments/data/smoother_X_spectrum_Jacobi_rand.csv", df_rand)
+
+# -----------------------------------------------------------------------------
+# AMG heuristic
+# -----------------------------------------------------------------------------
+
+# Classical amg basically builds P_gmg
+tgs_amg = Dict(
+    "Optimal" => TwoGridOperator(A, R_gs, n_c),
+    "Linear interpolation" => TwoGridOperator(A, R_gs, P_gmg),
+    # "Classical AMG" => TwoGridOperator(A, R_gs, P_rs),
+    # "Smoothed Aggregation" => TwoGridOperator(A, R_gs, P_sa),
+)
+
+plot_spectrum(tgs_amg, :X)
+
+df_sorted_abs_gmg = tg_spectrum(tgs_amg, :X)
+CSV.write("experiments/data/smoother_X_spectrum_GS_gmg.csv", df_sorted_abs_gmg)
+
+# smoothed Aggregation returns a smaller n_coarse
+n_c_sa = size(P_sa)[2] 
+
+tgs_amg_sa = Dict(
+    "Optimal" => TwoGridOperator(A, R_gs, n_c_sa),
+    "Smoothed Aggregation" => TwoGridOperator(A, R_gs, P_sa),
+)
+
+plot_spectrum(tgs_amg_sa, :X)
+
+df_sorted_abs_sa = tg_spectrum(tgs_amg_sa, :X)
+CSV.write("experiments/data/smoother_X_spectrum_GS_sa.csv", df_sorted_abs_sa)

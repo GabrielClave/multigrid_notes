@@ -4,6 +4,7 @@
 *.csv
 draft.typ
 notes.typ
+.CondaPkg
 
 ### LaTeX ###
 ## Core latex/pdflatex auxiliary files:
