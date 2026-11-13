@@ -6,11 +6,14 @@
 #show: metropolis-theme.with(
   aspect-ratio: "16-9",
   config-info(
-    title: [Multigrid],
+    title: [Elements of Multigrid],
+    subtitle: [Smoothers, Coarse Projections, and Convergence],
     author: [Gabriel Clave],
     date: datetime.today().display(),
   )
 )
+
+// #show heading.where(level: 1): set text(size: em)
 
 #let range = math.op("range")
 #let nul = math.op("null")
@@ -55,14 +58,14 @@ $
 
 The iteration is convergent if $rho(S) < 1$
 
-== Smoother convergence
+== Jacobi Smoother convergence: relative error norm per iteration
 
 #align(center)[
  #image("../../pictures/jacobi_convergence.png", width: 80%)
 ]
 // smoother alone aren't great solver and stagnates
 
-== Smoother spectrum
+== Jacobi Smoother spectrum
 
 #align(center)[
  #image("../../pictures/plot_J_spectrum.png", width: 80%)
@@ -178,7 +181,7 @@ A multigrid solver relies on three core ingredients:
 
 - A *Coarse Solver* (can recursively be another multigrid cycle).
 
-== V-cycle
+== Recursive multigrid: V-cycle
 
 #align(center)[
   #fig-v-cycle
@@ -215,7 +218,7 @@ $
   ||E||_A = ||(I - M A)(I - Pi_c)||_A
 $
 
-To do so we use a slightly different operator:
+To do so we study a slightly different operator:
 
 $
   X = (I - Pi_c) Mb A e_H : quad H^A -> H^A
@@ -293,31 +296,37 @@ For a given problem $(A, V)$ and a given smoother $M$, how do we construct $P$ ?
 
 = Numerical applications
 
-// introduce A ?
-
 == Spectrum of classic multigrid smoother
 
 #align(center)[
- #image("../../pictures/plot_S_spectrum.png", width: 80%)
+ #image("../../pictures/S_Spectrum_true_GS.png", width: 90%)
 ]
 
-== Effect of X
+== Spectrum of $X = (I - Pi_c) Mb A$ for classic multigrid smoother
 #align(center)[
- #image("../../pictures/plot_X_opt_spectrum.png", width: 80%)
+ #image("../../pictures/plot_X_opt_spectrum_trunc.png", width: 90%)
 ]
 
-== two-grids convergence
+// example of GMG
+== Gauss-Seidel and linear interpolation Prolongation
 #align(center)[
- #image("../../pictures/plot_convergence.png", width: 80%)
+ #image("../../pictures/plot_X_spectrum_GS_gmg.png", width: 90%)
 ]
 
-
-== Effect of X with P = linear interpolation
+// example of AMG heuristic
+== Gauss-Seidel and AMG Prolongation
 #align(center)[
- #image("../../pictures/plot_X_spectrum.png", width: 80%)
+ #image("../../pictures/plot_X_spectrum_GS_sa.png", width: 90%)
 ]
 
-== Effect of X with P = linear interpolation
-#align(center)[
- #image("../../pictures/plot_fourier_attenuation.png", width: 80%)
+#focus-slide[
+  #text(size: 1.8em, weight: "medium")[Thank you for your attention!]
+
+  #v(1.5em)
+
+  #text(size: 0.7em, fill: white.darken(15%))[
+    *Main Reference:* \
+    Jinchao Xu and Ludmil Zikatanov, _"Algebraic multigrid methods"_, \
+    Acta Numerica, vol. 26, pp. 591–721, Cambridge University Press, 2017. \
+  ]
 ]

@@ -510,13 +510,13 @@
       stroke: (paint: red-accent, thickness: 1.5pt)
     )
 
-    content(e-H-smoothed, padding: 0.15, $(I - X) e_H$, anchor: "east")
+    content(e-H-smoothed, padding: 0.15, $(I - Pi_c)(I - M A) e_H$, anchor: "east")
 
     content(
       midpoint-H,
       padding: 0.2,
       text(size: 18pt, fill: red-accent)[
-        Smoother effect on $H^A:$ \
+        Smoother reduction \ effect on $H^A:$ \
         $ (I - Pi_c) M A e_H $
       ],
       anchor: "east"
