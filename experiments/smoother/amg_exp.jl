@@ -1,4 +1,5 @@
 using LinearAlgebra
+using CSV
 
 include("twoGrid.jl")
 include("twoGrid_helpers.jl")
@@ -40,13 +41,13 @@ tg_rand = TwoGridOperator(A, R_as, P_rand)
 plot_spectrum(tg_rand, :X)
 solve(tg_rand, rand(n), zeros(n))
 
-k = 12
+k = 5
 P_rand = V
 for _ in 1:k P_rand = S_wJ*P_rand end
 cond(P_rand) # k = 5, 1e4 / k = 10 1e6 / k = 100 1e9 and up
 tg_rand = TwoGridOperator(A, R_wJ, P_rand)
 plot_spectrum(tg_rand, :X)
-# not even an orthogonal projection !
+# not even an orthogonal projection ! (k =100)
 
 tgs_wJ = Dict(
     "gmg"  => TwoGridOperator(A, R_wJ, P_gmg),
@@ -55,7 +56,7 @@ tgs_wJ = Dict(
 )
 
 plot_spectrum(tgs_wJ, :X)
-# not great
+# k =10ish great, k too low (5ish) or too high (20+ish) not great
 # probably not an actual basis: "too colinear" maybe ?
 
 plot_history(tg_rand, rand(n), zeros(n))
@@ -89,3 +90,17 @@ tgs_wJ = Dict(
 
 plot_spectrum(tgs_wJ, :X)
 plot_history(tgs_wJ, rand(n), zeros(n))
+
+tgs_wJ = Dict(
+    "k = 2" => TwoGridOperator(A, R_wJ, build_smoothed_coarse_space(S_wJ, n_c, 2)),
+    "k = 5" => TwoGridOperator(A, R_wJ, build_smoothed_coarse_space(S_wJ, n_c, 5)),
+    "k = 10" => TwoGridOperator(A, R_wJ, build_smoothed_coarse_space(S_wJ, n_c, 10)),
+    "k = 20" => TwoGridOperator(A, R_wJ, build_smoothed_coarse_space(S_wJ, n_c, 20)),
+    "Optimal P" => TwoGridOperator(A, R_wJ, n_c),
+)
+
+plot_spectrum(tgs_wJ, :X)
+plot_history(tgs_wJ, rand(n), zeros(n))
+
+df_rand = tg_spectrum(tgs_wJ, :X)
+CSV.write("experiments/data/smoother_X_spectrum_Jacobi_rand.csv", df_rand)

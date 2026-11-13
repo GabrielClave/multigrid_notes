@@ -113,12 +113,12 @@ df_convergence_opt[!, :bound_gs] = compute_XZ_bound(tgs_opt["GaussSeidel"], maxi
 # CSV Export
 # -----------------------------------------------------------------------------
 
-CSV.write("experiments/data/smoother_spectrum.csv", df_sorted_abs_ev)
-CSV.write("experiments/data/fourier_attenuation.csv", df_fourier_attenuation)
-CSV.write("experiments/data/fourier_attenuation_anorm.csv", df_fourier_attenuation_anorm)
-CSV.write("experiments/data/smoother_T_spectrum.csv", df_sorted_T_ev)
-CSV.write("experiments/data/smoother_X_spectrum.csv", df_sorted_X_ev)
-CSV.write("experiments/data/smoother_X_opt_spectrum.csv", df_sorted_X_opt_ev)
-CSV.write("experiments/data/two_grid_convergence.csv", df_convergence)
-CSV.write("experiments/data/two_grid_convergence_normA.csv", df_convergence_normA)
-CSV.write("experiments/data/two_grid_convergence_opt.csv", df_convergence_opt)
+# CSV.write("experiments/data/smoother_spectrum.csv", df_sorted_abs_ev)
+# CSV.write("experiments/data/fourier_attenuation.csv", df_fourier_attenuation)
+# CSV.write("experiments/data/fourier_attenuation_anorm.csv", df_fourier_attenuation_anorm)
+# CSV.write("experiments/data/smoother_T_spectrum.csv", df_sorted_T_ev)
+# CSV.write("experiments/data/smoother_X_spectrum.csv", df_sorted_X_ev)
+# CSV.write("experiments/data/smoother_X_opt_spectrum.csv", df_sorted_X_opt_ev)
+# CSV.write("experiments/data/two_grid_convergence.csv", df_convergence)
+# CSV.write("experiments/data/two_grid_convergence_normA.csv", df_convergence_normA)
+# CSV.write("experiments/data/two_grid_convergence_opt.csv", df_convergence_opt)

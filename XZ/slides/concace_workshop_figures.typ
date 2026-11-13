@@ -15,13 +15,73 @@
 #let nul = math.op("null")
 #let im = math.op("Im")
 #let ker = math.op("ker")
-#let Bi = $overline(B)^(-1)$
-#let Bb = $overline(B)$
+#let Mi = $overline(M)^(-1)$
+#let Mb = $overline(M)$
 #let Tb = $overline(T)$
 #let Sb = $overline(S)$
 #let lm = $lambda_max$
 #let lk = $lambda_k$
 #let lmin = $lambda_min$
+
+== Smoother spectrum
+
+// #let fig-spectrum-split(step: 2) = canvas({
+//   import draw: *
+
+//   let trajectory-red  = rgb("#e76f51")
+//   let trajectory-teal = rgb("#2a9d8f")
+
+//   // 1. Render image inside draw.image with named anchor
+//   image("../../pictures/plot_J_spectrum.png", width: 80%)
+
+//   // 2. Coordinates tuned to the plot area relative to plot.south-west
+//   let x-split = 0.52
+//   let split-top    = (rel: (x-split * 14, 6.2), to: "plot.south-west")
+//   let split-bottom = (rel: (x-split * 14, 1.1), to: "plot.south-west")
+
+//   // 3. Conditional drawing within CeTZ canvas
+//   if step >= 2 {
+//     // Shaded region for H (effective smoothing domain)
+//     rect(
+//       split-top,
+//       (rel: (5.8, -5.1), to: split-top),
+//       fill: rgb("#e76f5115"),
+//       stroke: none
+//     )
+
+//     // Vertical dashed demarcation line
+//     line(
+//       split-top,
+//       split-bottom,
+//       stroke: (dash: "dashed", paint: trajectory-red, thickness: 1.5pt)
+//     )
+
+//     // Label content definitions (wrapped properly to prevent join errors)
+//     let label-L = [
+//       #text(fill: gray.darken(30%), weight: "bold", size: 0.9em)[$L$ (Low Frequencies)] \
+//       #text(fill: gray.darken(30%), size: 0.8em)[$lambda(S) approx 1 arrow.r$ Stagnation]
+//     ]
+
+//     let label-H = [
+//       #text(fill: trajectory-red, weight: "bold", size: 0.9em)[$H$ (High Frequencies)] \
+//       #text(fill: trajectory-red, size: 0.8em)[$lambda(S) thin \ll thin 1 arrow.r$ Damped]
+//     ]
+
+//     // Subspace L
+//     content(
+//       (rel: (-2.5, -0.4), to: split-top),
+//       label-L,
+//       anchor: "south"
+//     )
+
+//     // Subspace H
+//     content(
+//       (rel: (2.5, -0.4), to: split-top),
+//       label-H,
+//       anchor: "south"
+//     )
+//   }
+// })
 
 == Smoother effect
 
@@ -40,7 +100,7 @@
   let eh = 10
   let ep = 14
   let eh-smoothed = 1.2
-  let ep-smoothed = 8.2
+  let ep-smoothed = 10.2
 
   let e-pt = (ep, eh)
   let e-H = (0.0, eh)
@@ -84,7 +144,7 @@
     content(e-P-smoothed, padding: 0.15, text()[$(S e)_L$], anchor: "north")
 
     circle(e-smoothed, radius: circle_radius, fill: black, stroke: none)
-    content(e-smoothed, padding: 2, text(fill: trajectory-teal)[smoother \ effect], anchor: "south")
+    content(e-smoothed, padding: 3, text(fill: trajectory-teal)[smoother \ effect], anchor: "south")
     content(e-smoothed, padding: 0.2, text()[$S e$], anchor: "north-west")
   }
 
@@ -101,7 +161,7 @@
     )
     content(
       (padding, (eh + eh-smoothed) / 2),
-      text(fill: trajectory-red, size: 0.85em)[strong \ damping],
+      text(fill: trajectory-red, size: 0.85em)[#align(center)[strong \ damping]],
       anchor: "east"
     )
 
@@ -111,11 +171,11 @@
       mark: (end: "straight", fill: trajectory-purple),
       stroke: (paint: trajectory-purple, thickness: 1.5pt)
     )
-    // content(
-    //   ((ep + ep-smoothed) / 2, padding),
-    //   text(fill: trajectory-purple, size: 0.85em)[small reduction],
-    //   anchor: "north"
-    // )
+    content(
+      ((ep + ep-smoothed) / 2, padding),
+      text(fill: trajectory-purple, size: 0.85em)[#align(center)[small \ reduction]],
+      anchor: "north"
+    )
   }
 
 })
@@ -191,7 +251,7 @@
       stroke: (paint: trajectory-purple, thickness: 2pt)
     )
 
-    // Bight angle indicator at the y-axis (0, eh)
+    // Might angle indicator at the y-axis (0, eh)
     let ra-size = 0.4
     line(
       (0.0, eh - ra-size),
@@ -389,7 +449,7 @@
   let e-H = (0.0, eh)            // e_H = (I - \Pi_c) e
   let e-P = (ep, 0.0)            // e_P = \Pi_c e
 
-  let e-H-smoothed = (0.0, ehs)  // Bemaining error on H
+  let e-H-smoothed = (0.0, ehs)  // Remaining error on H
   let e-final = (eps, ehs)       // Final error state
   let e-P-final = (eps, 0.0)
 
@@ -400,7 +460,7 @@
   line((0.0, -0.5), (0.0, ymax), stroke: 1pt)
 
   content((xmax - padding, 0.0), $range(P)$, anchor: "west")
-  content((0.0, ymax - padding), $range(P)^(perp_A)$, anchor: "south")
+  content((0.0, ymax - padding), $H^A$, anchor: "south")
 
   // --- INITIAL STATE e & DECOMPOSITION ---
   line(e-pt, e-H, stroke: (dash: "dashed", paint: gray))
@@ -435,14 +495,14 @@
     line(e-final, e-P-final, stroke: (dash: "dashed", paint: gray))
 
     circle(e-final, radius: circle_radius, fill: black, stroke: none)
-    content(e-final, padding: 0.15, $(I - B A)e_H$, anchor: "west")
+    content(e-final, padding: 0.15, $(I - M A)e_H$, anchor: "west")
   }
 
   if step == 1{
-    content(e-H-smoothed, padding: 0.15, $(I - Pi_c)(I - B A) e_H$, anchor: "east")
+    content(e-H-smoothed, padding: 0.15, $(I - Pi_c)(I - M A) e_H$, anchor: "east")
   }
 
-  // --- STEP 2: Bed smoother effect along H ---
+  // --- STEP 2: Med smoother effect along H ---
   if step >= 2 {
     line(
       e-H, e-H-smoothed,
@@ -455,9 +515,9 @@
     content(
       midpoint-H,
       padding: 0.2,
-      text(size: 15pt, fill: red-accent)[
-        Smoother effect on $range(P)^(perp_A):$ \
-        $ X = (I - Pi_c) B A e_H $
+      text(size: 18pt, fill: red-accent)[
+        Smoother effect on $H^A:$ \
+        $ (I - Pi_c) M A e_H $
       ],
       anchor: "east"
     )
@@ -547,7 +607,7 @@
     let e-H = (0, eh)          // High-frequency component e_H
     let e-P = (ep, 0)            // Coarse-space component e_P
     let e-smoothed = (eps, ehs)   // Error after smoother: (I - T_bar) e
-    let e-H-smoothed = (0, ehs) // Beduced high-frequency component (I - X) e_H
+    let e-H-smoothed = (0, ehs) // Reduced high-frequency component (I - X) e_H
     let e-P-smoothed = (eps, 0) // Slightly reduced coarse component
     let midpoint = (0, (ehs+eh)/2)
 
@@ -569,7 +629,7 @@
     // circle(e-P, radius: 0.06, fill: blue, stroke: none)
     content(e-P, padding: 0.15, $e_P$, anchor: "north")
 
-    // --- STATE AFTEB SMOOTHEB (I - T_bar)e ---
+    // --- STATE AFTER SMOOTHER (I - T_bar)e ---
     // Dashed projection lines for smoothed error
     line(e-smoothed, e-H-smoothed, stroke: (dash: "dashed", paint: gray))
     line(e-smoothed, e-P-smoothed, stroke: (dash: "dashed", paint: gray))
@@ -577,11 +637,11 @@
     // Vector (I - T_bar)e
     line(e-pt, e-smoothed, mark: (end: "triangle", fill: main-purple), stroke: (paint: main-purple, thickness: 1.5pt)) // effect of smoother
     circle(e-smoothed, radius: 0.06, fill: black, stroke: none)
-    content(e-smoothed, padding: 0.15, $(I - B A)e$, anchor: "south-east")
+    content(e-smoothed, padding: 0.15, $(I - M A)e$, anchor: "south-east")
 
     // Projections of smoothed error on axes
     // circle(e-H-smoothed, radius: 0.06, fill: rgb("d9534f"), stroke: none)
-    content(midpoint, padding: 0.15, $(I - Pi_c)B A e\ = "important part"$, anchor: "east")
+    content(midpoint, padding: 0.15, $(I - Pi_c)M A e\ = "important part"$, anchor: "east")
     // circle(e-P-smoothed, radius: 0.06, fill: rgb("d9534f"), stroke: none)
 
     // Action of smoother on H component (reduction arrow)
@@ -615,7 +675,7 @@
     let e-H = (0, eh)          // High-frequency component e_H
     let e-P = (ep, 0)            // Coarse-space component e_P
     let e-smoothed = (eps, ehs)   // Error after smoother: (I - T_bar) e
-    let e-H-smoothed = (0, ehs) // Beduced high-frequency component (I - X) e_H
+    let e-H-smoothed = (0, ehs) // Reduced high-frequency component (I - X) e_H
     let e-P-smoothed = (eps, 0) // Slightly reduced coarse component
     let midpoint = (0, (ehs+eh)/2)
 
@@ -637,16 +697,16 @@
     // circle(e-P, radius: 0.06, fill: blue, stroke: none)
     content(e-P, padding: 0.15, $e_P$, anchor: "north")
 
-    // --- STATE AFTEB SMOOTHEB (I - T_bar)e ---
+    // --- STATE AFTER SMOOTHER (I - T_bar)e ---
 
-    // Vector (I - BA)e
+    // Vector (I - MA)e
     line(e-pt, e-smoothed, mark: (end: "triangle", fill: main-purple), stroke: (paint: main-purple, thickness: 1.5pt)) // effect of smoother
     circle(e-smoothed, radius: 0.06, fill: black, stroke: none)
-    content(e-smoothed, padding: 0.15, $(I - B A)e$, anchor: "south-east")
+    content(e-smoothed, padding: 0.15, $(I - M A)e$, anchor: "south-east")
 
     // Projections of smoothed error on axes
     // circle(e-H-smoothed, radius: 0.06, fill: rgb("d9534f"), stroke: none)
-        content(midpoint, padding: 0.15, $(I - Pi_c)B A e_H$, anchor: "east")
+        content(midpoint, padding: 0.15, $(I - Pi_c)M A e_H$, anchor: "east")
 
     // circle(e-P-smoothed, radius: 0.06, fill: rgb("d9534f"), stroke: none)
 
@@ -654,7 +714,7 @@
     line((0, eh), (0, 0), mark: (end: "triangle", fill: red-accent), stroke: (paint: red-accent, thickness: 1.5pt))
     // content((-0.1, 2.2), text(size: 8pt, fill: red-accent)[$text("Smoother action on \n high frequency error")$], anchor: "east")
 
-    content(e-H-smoothed, padding: 0.5, $(I - Pi_c)(I - B A) e_H$, anchor: "east")
+    content(e-H-smoothed, padding: 0.5, $(I - Pi_c)(I - M A) e_H$, anchor: "east")
 
     // Vector e
     circle(e-pt, radius: 0.06, fill: black, stroke: none)
@@ -662,3 +722,84 @@
   })
 
   #fig-optimal-smoother
+
+== V-cycle
+
+#let fig-v-cycle = canvas({
+  import draw: *
+
+  let dx = 1.9
+  let dy = 3.5
+  let r-node = 0.1
+  let p_padding = 0.7
+
+  let c-primary = rgb("#7570b3")
+  let c-coarse = rgb("#ad1b1bd7")
+  let c-guide = luma(210)
+
+  let spaces = ($V$, $V_1$, $V_2$, $V_3$)
+  let eqs = ($A e = r$, $A_1 e_1 = r_1$, $A_2 e_2 = r_2$, $e_3 = A_3^(-1) r_3$)
+  let rests = ($P_1^T$, $P_2^T$, $P_3^T$)
+  let prols = ($P_1$, $P_2$, $P_3$)
+
+  // Subtle horizontal level guides and space labels on the left
+  for k in std.range(4) {
+      let y = (3 - k) * dy
+      let y-eq = if k == 3 { y - 1 } else { y + 0.3 }
+      line((-1.4, y), (6 * dx + 1.4, y), stroke: (paint: c-guide, dash: "dashed", thickness: 0.6pt))
+      content((-1.7, y), anchor: "east", spaces.at(k))
+      content((3 * dx, y-eq), anchor: "south", eqs.at(k))
+  }
+
+  // Descent nodes (pre-smoothing levels: V, V_1, V_2)
+  for k in std.range(3) {
+    let x = k * dx
+    let y = (3 - k) * dy
+    let name = "down-" + str(k)
+    circle((x, y), radius: r-node, fill: white, stroke: 1.2pt + c-primary, name: name)
+  }
+
+  // Coarsest grid node (V_3)
+  let x-bot = 3 * dx
+  circle((x-bot, 0), radius: r-node, fill: c-coarse, stroke: 1.2pt + c-coarse, name: "bottom")
+
+  // Ascent nodes (post-smoothing levels: V_2, V_1, V)
+  for k in std.range(3) {
+    let lvl = 2 - k
+    let x = (4 + k) * dx
+    let y = (k + 1) * dy
+    let name = "up-" + str(lvl)
+    circle((x, y), radius: r-node, fill: white, stroke: 1.2pt + c-primary, name: name)
+  }
+
+  // Restriction arrows (downward)
+  let down-names = ("down-0", "down-1", "down-2", "bottom")
+  for k in std.range(3) {
+    let edge = "rest-" + str(k)
+    line(
+      down-names.at(k),
+      down-names.at(k + 1),
+      stroke: 1.1pt + black,
+      mark: (end: ">", fill: black, scale: 0.8),
+      name: edge,
+    )
+    content(edge + ".mid", anchor: "east", padding: p_padding, rests.at(k))
+  }
+
+  // Prolongation arrows (upward)
+  let up-names = ("bottom", "up-2", "up-1", "up-0")
+  for k in std.range(3) {
+    let prol-idx = 2 - k
+    let edge = "prol-" + str(prol-idx)
+    line(
+      up-names.at(k),
+      up-names.at(k + 1),
+      stroke: 1.1pt + black,
+      mark: (end: ">", fill: black, scale: 0.8),
+      name: edge,
+    )
+    content(edge + ".mid", anchor: "west", padding: p_padding, prols.at(prol-idx))
+  }
+})
+
+#fig-v-cycle 
